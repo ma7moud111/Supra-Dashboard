@@ -1,0 +1,25 @@
+[Unit]
+Description=Weston RDP Compositor
+After=systemd-user-sessions.service getty@tty1.service
+Conflicts=weston.service
+
+[Service]
+# Run as root (change if you have a non-root user configured)
+User=root
+
+# Environment variables for Weston runtime
+Environment=XDG_RUNTIME_DIR=/run/user/0
+Environment=WAYLAND_DISPLAY=wayland-0
+
+# Weston RDP backend startup
+ExecStart=/usr/bin/weston \
+    --backend=rdp-backend.so \
+    --rdp-tls-cert=/etc/freerdp/keys/server.crt \
+    --rdp-tls-key=/etc/freerdp/keys/server.key \
+    --no-clients-resize
+
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target
