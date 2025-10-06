@@ -1,3 +1,4 @@
+// main.cpp (updated)
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -6,6 +7,7 @@
 #include "dashboardcontroller.h"
 #include "tachometercontroller.h"
 #include "temperaturecontroller.h"
+#include "gpiocontroller.h"
 
 int main(int argc, char *argv[])
 {
@@ -17,6 +19,7 @@ int main(int argc, char *argv[])
     DashboardController dashboardController;
     TachometerController tachometerController;
     TemperatureController temperatureController;
+    GpioController gpioController(&dashboardController, &speedController);
 
     // Engine state connections
     QObject::connect(&dashboardController, &DashboardController::engineOnChanged,

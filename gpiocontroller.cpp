@@ -19,6 +19,7 @@ GpioController::GpioController(DashboardController *dc, SpeedController *sc, QOb
     exportGpio(LEFT_LED_PIN);
     exportGpio(RIGHT_LED_PIN);
 
+    // Set directions
     setDirection(ENGINE_BUTTON_PIN, "in");
     setDirection(ACCEL_BUTTON_PIN, "in");
     setDirection(BRAKE_BUTTON_PIN, "in");
@@ -27,11 +28,11 @@ GpioController::GpioController(DashboardController *dc, SpeedController *sc, QOb
     setDirection(LEFT_LED_PIN, "out");
     setDirection(RIGHT_LED_PIN, "out");
 
-
+    // Initial LED states
     writeGpio(LEFT_LED_PIN, 0);
     writeGpio(RIGHT_LED_PIN, 0);
 
-
+    // Connect signals for physical LEDs
     connect(m_dc, &DashboardController::leftSignalOnChanged, [this](bool on) {
         writeGpio(LEFT_LED_PIN, on ? 1 : 0);
     });
@@ -39,12 +40,12 @@ GpioController::GpioController(DashboardController *dc, SpeedController *sc, QOb
         writeGpio(RIGHT_LED_PIN, on ? 1 : 0);
     });
 
-
+    // Poll timer for buttons
     QTimer *timer = new QTimer(this);
     connect(timer, &QTimer::timeout, this, &GpioController::pollButtons);
     timer->start(50);
 
-
+    // Initial button states (assuming active low with pull-up)
     m_prevEngine = readGpio(ENGINE_BUTTON_PIN);
     m_prevAccel = readGpio(ACCEL_BUTTON_PIN);
     m_prevBrake = readGpio(BRAKE_BUTTON_PIN);
@@ -53,14 +54,14 @@ GpioController::GpioController(DashboardController *dc, SpeedController *sc, QOb
 }
 
 void GpioController::pollButtons() {
-
+    // Engine toggle on falling edge
     int currEngine = readGpio(ENGINE_BUTTON_PIN);
     if (currEngine == 0 && m_prevEngine == 1) {
         m_dc->setEngineOn(!m_dc->engineOn());
     }
     m_prevEngine = currEngine;
 
-
+    // Accelerate on press (falling), stop on release (rising)
     int currAccel = readGpio(ACCEL_BUTTON_PIN);
     if (currAccel == 0 && m_prevAccel == 1) {
         m_sc->startAcceleration();
@@ -69,7 +70,7 @@ void GpioController::pollButtons() {
     }
     m_prevAccel = currAccel;
 
-
+    // Brake on press (falling), stop on release (rising)
     int currBrake = readGpio(BRAKE_BUTTON_PIN);
     if (currBrake == 0 && m_prevBrake == 1) {
         m_sc->startBraking();
@@ -78,7 +79,7 @@ void GpioController::pollButtons() {
     }
     m_prevBrake = currBrake;
 
-
+    // Left signal toggle on falling edge
     int currLeft = readGpio(LEFT_SIGNAL_BUTTON_PIN);
     if (currLeft == 0 && m_prevLeftSig == 1) {
         m_dc->toggleLeftSignal();
