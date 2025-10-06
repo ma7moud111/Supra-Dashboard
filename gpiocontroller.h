@@ -12,8 +12,8 @@ constexpr int ACCEL_BUTTON_PIN = 6;
 constexpr int BRAKE_BUTTON_PIN = 13;
 constexpr int LEFT_SIGNAL_BUTTON_PIN = 19;
 constexpr int RIGHT_SIGNAL_BUTTON_PIN = 26;
-constexpr int LEFT_LED_PIN = 9;
-constexpr int RIGHT_LED_PIN = 11;
+constexpr int LEFT_LED_PIN = 17;
+constexpr int RIGHT_LED_PIN = 27;
 
 class GpioController : public QObject {
     Q_OBJECT
