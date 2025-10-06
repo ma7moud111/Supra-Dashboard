@@ -6,8 +6,8 @@
 class DashboardController;
 class SpeedController;
 
-constexpr int ENGINE_BUTTON_PIN = 17;
-constexpr int ACCEL_BUTTON_PIN = 18;
+constexpr int ENGINE_BUTTON_PIN = 5;
+constexpr int ACCEL_BUTTON_PIN = 6;
 constexpr int BRAKE_BUTTON_PIN = 27;
 constexpr int LEFT_SIGNAL_BUTTON_PIN = 22;
 constexpr int RIGHT_SIGNAL_BUTTON_PIN = 23;
