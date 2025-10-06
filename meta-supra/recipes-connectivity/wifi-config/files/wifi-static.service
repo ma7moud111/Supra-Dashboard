@@ -1,0 +1,12 @@
+[Unit]
+Description=WiFi static IP configuration
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/wifi-static.sh
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
