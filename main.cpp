@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
     TemperatureController temperatureController;
     GpioController gpioController(&dashboardController, &speedController);
 
-    // Engine state connections
+
     QObject::connect(&dashboardController, &DashboardController::engineOnChanged,
                      [&](bool on) {
                          speedController.setEngineRunning(on);
