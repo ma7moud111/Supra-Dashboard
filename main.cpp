@@ -1,4 +1,3 @@
-// main.cpp (updated)
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
@@ -47,6 +46,7 @@ int main(int argc, char *argv[])
                              QCoreApplication::exit(-1);
                      }, Qt::QueuedConnection);
 
+    qDebug() << "Starting application. If GPIO export fails, try running with sudo.";
     engine.load(url);
     return app.exec();
 }

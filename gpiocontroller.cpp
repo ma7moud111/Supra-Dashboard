@@ -1,32 +1,30 @@
-// gpiocontroller.cpp (new file)
 #include "gpiocontroller.h"
 #include "dashboardcontroller.h"
 #include "speedcontroller.h"
 
 #include <QFile>
 #include <QTextStream>
+#include <QThread>
 #include <QTimer>
 #include <QDebug>
 
 GpioController::GpioController(DashboardController *dc, SpeedController *sc, QObject *parent)
     : QObject(parent), m_dc(dc), m_sc(sc) {
-    // Export GPIOs
-    exportGpio(ENGINE_BUTTON_PIN);
-    exportGpio(ACCEL_BUTTON_PIN);
-    exportGpio(BRAKE_BUTTON_PIN);
-    exportGpio(LEFT_SIGNAL_BUTTON_PIN);
-    exportGpio(RIGHT_SIGNAL_BUTTON_PIN);
-    exportGpio(LEFT_LED_PIN);
-    exportGpio(RIGHT_LED_PIN);
+    // List of pins to configure
+    const int pins[] = {ENGINE_BUTTON_PIN, ACCEL_BUTTON_PIN, BRAKE_BUTTON_PIN,
+                        LEFT_SIGNAL_BUTTON_PIN, RIGHT_SIGNAL_BUTTON_PIN,
+                        LEFT_LED_PIN, RIGHT_LED_PIN};
+    const int pinCount = sizeof(pins) / sizeof(pins[0]);
 
-    // Set directions
-    setDirection(ENGINE_BUTTON_PIN, "in");
-    setDirection(ACCEL_BUTTON_PIN, "in");
-    setDirection(BRAKE_BUTTON_PIN, "in");
-    setDirection(LEFT_SIGNAL_BUTTON_PIN, "in");
-    setDirection(RIGHT_SIGNAL_BUTTON_PIN, "in");
-    setDirection(LEFT_LED_PIN, "out");
-    setDirection(RIGHT_LED_PIN, "out");
+    // Attempt to export and configure all pins
+    for (int i = 0; i < pinCount; ++i) {
+        exportGpio(pins[i]);
+        if (i < 5) { // Buttons are inputs
+            setDirection(pins[i], "in");
+        } else { // LEDs are outputs
+            setDirection(pins[i], "out");
+        }
+    }
 
     // Initial LED states
     writeGpio(LEFT_LED_PIN, 0);
@@ -95,14 +93,24 @@ void GpioController::pollButtons() {
 }
 
 void GpioController::exportGpio(int pin) {
-    QFile file("/sys/class/gpio/export");
-    if (file.open(QIODevice::WriteOnly)) {
-        QTextStream out(&file);
-        out << pin;
-        file.close();
-    } else {
-        qDebug() << "Failed to export GPIO" << pin;
+    const int maxRetries = 3;
+    for (int attempt = 0; attempt < maxRetries; ++attempt) {
+        QFile file("/sys/class/gpio/export");
+        if (file.open(QIODevice::WriteOnly)) {
+            QTextStream out(&file);
+            out << pin;
+            file.close();
+            qDebug() << "Successfully exported GPIO" << pin;
+            return;
+        } else {
+            qDebug() << "Failed to export GPIO" << pin << "on attempt" << attempt + 1
+                     << "- Error:" << file.errorString();
+            if (attempt < maxRetries - 1) {
+                QThread::msleep(100); // Wait before retrying
+            }
+        }
     }
+    qWarning() << "Failed to export GPIO" << pin << "after" << maxRetries << "attempts";
 }
 
 void GpioController::setDirection(int pin, const QString &dir) {
@@ -111,8 +119,9 @@ void GpioController::setDirection(int pin, const QString &dir) {
         QTextStream out(&file);
         out << dir;
         file.close();
+        qDebug() << "Set direction for GPIO" << pin << "to" << dir;
     } else {
-        qDebug() << "Failed to set direction for GPIO" << pin;
+        qDebug() << "Failed to set direction for GPIO" << pin << "- Error:" << file.errorString();
     }
 }
 
@@ -125,7 +134,7 @@ int GpioController::readGpio(int pin) {
         file.close();
         return val.toInt();
     } else {
-        qDebug() << "Failed to read GPIO" << pin;
+        qDebug() << "Failed to read GPIO" << pin << "- Error:" << file.errorString();
         return -1;
     }
 }
@@ -136,7 +145,8 @@ void GpioController::writeGpio(int pin, int val) {
         QTextStream out(&file);
         out << val;
         file.close();
+        qDebug() << "Wrote" << val << "to GPIO" << pin;
     } else {
-        qDebug() << "Failed to write to GPIO" << pin;
+        qDebug() << "Failed to write to GPIO" << pin << "- Error:" << file.errorString();
     }
 }
