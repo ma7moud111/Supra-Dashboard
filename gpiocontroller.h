@@ -2,50 +2,53 @@
 #define GPIOCONTROLLER_H
 
 #include <QObject>
-
-class DashboardController;
-class SpeedController;
-
-constexpr int ENGINE_BUTTON_PIN = 17;
-constexpr int ACCEL_BUTTON_PIN = 18;
-constexpr int BRAKE_BUTTON_PIN = 27;
-constexpr int LEFT_SIGNAL_BUTTON_PIN = 5;
-constexpr int RIGHT_SIGNAL_BUTTON_PIN = 6;
-constexpr int LEFT_LED_PIN = 24;
-constexpr int RIGHT_LED_PIN = 25;
-
-// constexpr int ENGINE_BUTTON_PIN = 5;
-// constexpr int ACCEL_BUTTON_PIN = 6;
-// constexpr int BRAKE_BUTTON_PIN = 13;
-// constexpr int LEFT_SIGNAL_BUTTON_PIN = 19;
-// constexpr int RIGHT_SIGNAL_BUTTON_PIN = 26;
-
-// constexpr int LEFT_LED_PIN = 24;
-// constexpr int RIGHT_LED_PIN = 25;
-
+#include <QTimer>
 
 class GpioController : public QObject {
     Q_OBJECT
-public:
-    explicit GpioController(DashboardController *dc, SpeedController *sc, QObject *parent = nullptr);
 
-private slots:
-    void pollButtons();
+public:
+    explicit GpioController(QObject *parent = nullptr);
+    ~GpioController();
+
+    void init();
+    void cleanup();
+
+signals:
+    void engineButtonPressed();
+    void accelButtonPressed();
+    void brakeButtonPressed();
+    void leftSignalButtonPressed();
+    void rightSignalButtonPressed();
+
+public slots:
+    void updateInputs();
+    void handleLeftSignal(bool on);
+    void handleRightSignal(bool on);
 
 private:
     void exportGpio(int pin);
-    void setDirection(int pin, const QString &dir);
-    int readGpio(int pin);
-    void writeGpio(int pin, int val);
+    void unexportGpio(int pin);
+    void setDirection(int pin, const std::string &direction);
+    int readGpioValue(int pin);
+    void writeGpioValue(int pin, int value);
 
-    DashboardController *m_dc;
-    SpeedController *m_sc;
+    const int ENGINE_BTN = 17;
+    const int ACCEL_BTN  = 27;
+    const int BRAKE_BTN  = 22;
+    const int LEFT_BTN   = 5;
+    const int RIGHT_BTN  = 6;
 
-    int m_prevEngine;
-    int m_prevAccel;
-    int m_prevBrake;
-    int m_prevLeftSig;
-    int m_prevRightSig;
+    const int LEFT_LED   = 23;
+    const int RIGHT_LED  = 24;
+
+    int lastEngineState = 1;
+    int lastAccelState  = 1;
+    int lastBrakeState  = 1;
+    int lastLeftState   = 1;
+    int lastRightState  = 1;
+
+    QTimer m_pollTimer;
 };
 
 #endif // GPIOCONTROLLER_H
