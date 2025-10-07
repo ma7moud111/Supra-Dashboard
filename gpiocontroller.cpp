@@ -16,7 +16,6 @@ GpioController::~GpioController() {
 }
 
 void GpioController::init() {
-    // Export GPIO pins and set directions
     int inputPins[] = {ENGINE_BTN, ACCEL_BTN, BRAKE_BTN, LEFT_BTN, RIGHT_BTN};
     int outputPins[] = {LEFT_LED, RIGHT_LED};
 
@@ -45,7 +44,7 @@ void GpioController::exportGpio(int pin) {
     if (exportFile.is_open()) {
         exportFile << pin;
         exportFile.close();
-        usleep(100000); // wait 100ms
+        usleep(100000);
     }
 }
 
@@ -71,7 +70,7 @@ void GpioController::setDirection(int pin, const string &direction) {
 int GpioController::readGpioValue(int pin) {
     string path = "/sys/class/gpio/gpio" + to_string(pin) + "/value";
     ifstream valFile(path);
-    int value = 1; // default HIGH
+    int value = 1;
     if (valFile.is_open()) {
         valFile >> value;
         valFile.close();

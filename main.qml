@@ -20,7 +20,7 @@ Window {
 
         Text {
             id: splashTitle
-            text: "  Car Dashboard                  Mahmoud Sayed"
+            text: "    Gauge Cluster                  Mahmoud Sayed"
             color: "white"
             font.pixelSize: 80
             font.bold: true
@@ -153,6 +153,18 @@ Window {
                     color: "lightgray"
                 }
             }
+        }
+
+        // ---------- Digital Clock (Above Speedometer) ----------
+        DigitalClock {
+            id: dashboardClock
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: speedometer.top
+            anchors.topMargin: 20
+            // anchors.bottomMargin: 30
+            glowColor: "#00eaff"
+            textColor: "grey"
+            fontSize: 90
         }
 
         // ---------- Speedometer (Center) ----------

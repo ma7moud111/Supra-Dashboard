@@ -22,6 +22,7 @@ qt_add_qml_module(appdashboardhw
     SOURCES tachometercontroller.h tachometercontroller.cpp
     SOURCES temperaturecontroller.h temperaturecontroller.cpp
     SOURCES gpiocontroller.h gpiocontroller.cpp
+    QML_FILES DigitalClock.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
