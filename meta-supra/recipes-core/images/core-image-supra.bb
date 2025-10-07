@@ -7,7 +7,7 @@ IMAGE_FEATURES:append = " splash package-management ssh-server-dropbear hwcodecs
 # Remove uneeded 
 IMAGE_FEATURES:remove = "ssh-server-dropbear"
 # Image Install apps
-IMAGE_INSTALL:append = " python3 bash tcpdump openssh wifi-config rdp-certs tictactoe"
+IMAGE_INSTALL:append = " python3 bash tcpdump openssh wifi-config rdp-certs tictactoe tictactoe-service user-supra"
 #IMAGE_INSTALL:remove = " weston-xwayland"
 
 EXTRA_IMAGE_FEATURES ?= "debug-tweaks ssh-server-openssh"
@@ -17,12 +17,12 @@ ENABLE_UART = "1"
 SERIAL_CONSOLES = "115200;ttyS0"
 
 # Configure gpio17 as pull-up
-RPI_EXTRA_CONFIG:append = " gpio=5=ip,pu \
-                            gpio=6=ip,pu \
-                            gpio=13=ip,pu \
-                            gpio=19=ip,pu \
-                            gpio=26=ip,pu \
-                            "
+RPI_EXTRA_CONFIG:append = " gpio=5=ip,pu"
+RPI_EXTRA_CONFIG:append = " gpio=6=ip,pu"
+RPI_EXTRA_CONFIG:append = " gpio=12=ip,pu"
+RPI_EXTRA_CONFIG:append = " gpio=16=ip,pu"
+RPI_EXTRA_CONFIG:append = " gpio=20=ip,pu"
+
 
 # Add custom applications and packages to the image
 IMAGE_INSTALL:append = " gtk+3-demo "

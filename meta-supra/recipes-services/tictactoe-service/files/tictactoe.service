@@ -1,0 +1,14 @@
+[Service]
+User=weston
+ExecStart=
+Environment=XDG_RUNTIME_DIR=/run/user/1000
+Environment=WAYLAND_DISPLAY=wayland-1
+Environment=QT_QPA_PLATFORM=wayland
+# Optional but helpful:
+Environment=LANG=C.UTF-8
+Environment=QT_DEBUG_PLUGINS=1
+# Wait for the socket before launching
+ExecStartPre=/bin/sh -c 'until [ -S /run/user/su 1000/wayland-1 ]; do sleep 1; done'
+ExecStart=/usr/bin/appxo
+Restart=on-failure
+RestartSec=2
