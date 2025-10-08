@@ -1,71 +1,116 @@
 #include "gpiocontroller.h"
-#include <QFile>
-#include <QTextStream>
-#include <QDebug>
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <unistd.h>
 
-GpioController::GpioController(QObject *parent)
-    : QObject(parent),
-    m_button1(true),
-    m_button2(true),
-    m_button3(true),
-    m_button4(true),
-    m_button5(true),
-    m_filePath("/home/weston/buttons_log.csv")
-{
-    // Set up polling (simulate input pull-up, 1 = released, 0 = pressed)
-    connect(&m_pollTimer, &QTimer::timeout, this, &GpioController::readButtonsFromFile);
-    m_pollTimer.start(200);  // 5 Hz polling rate
+using namespace std;
+
+GpioController::GpioController(QObject *parent) : QObject(parent) {
+    connect(&m_pollTimer, &QTimer::timeout, this, &GpioController::updateInputs);
+    m_pollTimer.setInterval(100);
 }
 
-void GpioController::readButtonsFromFile()
-{
-    QFile file(m_filePath);
-    if (!file.exists()) {
-        qWarning() << "Button log file not found at" << m_filePath;
-        return;
+GpioController::~GpioController() {
+    cleanup();
+}
+
+void GpioController::init() {
+    int inputPins[] = {ENGINE_BTN, ACCEL_BTN, BRAKE_BTN, LEFT_BTN, RIGHT_BTN};
+    int outputPins[] = {LEFT_LED, RIGHT_LED};
+
+    for (int pin : inputPins) {
+        exportGpio(pin);
+        setDirection(pin, "in");
     }
 
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning() << "Unable to open button log file";
-        return;
+    for (int pin : outputPins) {
+        exportGpio(pin);
+        setDirection(pin, "out");
+        writeGpioValue(pin, 0);
     }
 
-    QTextStream in(&file);
-    QString headerLine = in.readLine(); // Skip header
-    QString dataLine = in.readLine();
+    m_pollTimer.start();
+}
 
-    if (dataLine.isEmpty()) {
-        qWarning() << "Button log file is empty or malformed";
-        file.close();
-        return;
+void GpioController::cleanup() {
+    int allPins[] = {ENGINE_BTN, ACCEL_BTN, BRAKE_BTN, LEFT_BTN, RIGHT_BTN, LEFT_LED, RIGHT_LED};
+    for (int pin : allPins)
+        unexportGpio(pin);
+}
+
+void GpioController::exportGpio(int pin) {
+    ofstream exportFile("/sys/class/gpio/export");
+    if (exportFile.is_open()) {
+        exportFile << pin;
+        exportFile.close();
+        usleep(100000);
     }
+}
 
-    QStringList values = dataLine.split(',', Qt::SkipEmptyParts);
-    if (values.size() < 5) {
-        qWarning() << "Invalid button CSV format, expecting 5 values";
-        file.close();
-        return;
+void GpioController::unexportGpio(int pin) {
+    ofstream unexportFile("/sys/class/gpio/unexport");
+    if (unexportFile.is_open()) {
+        unexportFile << pin;
+        unexportFile.close();
     }
+}
 
-    // Convert to bool (1 = pressed/LOW, 0 = released/HIGH)
-    bool newButton1 = values[0].trimmed().toInt() == 0 ? false : true;
-    bool newButton2 = values[1].trimmed().toInt() == 0 ? false : true;
-    bool newButton3 = values[2].trimmed().toInt() == 0 ? false : true;
-    bool newButton4 = values[3].trimmed().toInt() == 0 ? false : true;
-    bool newButton5 = values[4].trimmed().toInt() == 0 ? false : true;
+void GpioController::setDirection(int pin, const string &direction) {
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/direction";
+    ofstream dirFile(path);
+    if (dirFile.is_open()) {
+        dirFile << direction;
+        dirFile.close();
+    } else {
+        cerr << "Failed to set direction for GPIO" << pin << endl;
+    }
+}
 
-    bool changed = (m_button1 != newButton1) || (m_button2 != newButton2) ||
-                   (m_button3 != newButton3) || (m_button4 != newButton4) ||
-                   (m_button5 != newButton5);
+int GpioController::readGpioValue(int pin) {
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
+    ifstream valFile(path);
+    int value = 1;
+    if (valFile.is_open()) {
+        valFile >> value;
+        valFile.close();
+    }
+    return value;
+}
 
-    m_button1 = newButton1;
-    m_button2 = newButton2;
-    m_button3 = newButton3;
-    m_button4 = newButton4;
-    m_button5 = newButton5;
+void GpioController::writeGpioValue(int pin, int value) {
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
+    ofstream valFile(path);
+    if (valFile.is_open()) {
+        valFile << value;
+        valFile.close();
+    }
+}
 
-    file.close();
+void GpioController::updateInputs() {
+    int engine = readGpioValue(ENGINE_BTN);
+    int accel  = readGpioValue(ACCEL_BTN);
+    int brake  = readGpioValue(BRAKE_BTN);
+    int left   = readGpioValue(LEFT_BTN);
+    int right  = readGpioValue(RIGHT_BTN);
 
-    if (changed)
-        emit buttonsUpdated();
+    if (engine == 0 && lastEngineState == 1) emit engineButtonPressed();
+    if (accel  == 0 && lastAccelState  == 1) emit accelButtonPressed();
+    if (brake  == 0 && lastBrakeState  == 1) emit brakeButtonPressed();
+    if (left   == 0 && lastLeftState   == 1) emit leftSignalButtonPressed();
+    if (right  == 0 && lastRightState  == 1) emit rightSignalButtonPressed();
+
+    lastEngineState = engine;
+    lastAccelState  = accel;
+    lastBrakeState  = brake;
+    lastLeftState   = left;
+    lastRightState  = right;
+}
+
+void GpioController::handleLeftSignal(bool on) {
+    writeGpioValue(LEFT_LED, on ? 1 : 0);
+}
+
+void GpioController::handleRightSignal(bool on) {
+    writeGpioValue(RIGHT_LED, on ? 1 : 0);
 }
