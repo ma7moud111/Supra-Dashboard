@@ -33,11 +33,11 @@ private:
     int readGpioValue(int pin);
     void writeGpioValue(int pin, int value);
 
-    const int ENGINE_BTN = 17;
-    const int ACCEL_BTN  = 27;
-    const int BRAKE_BTN  = 22;
-    const int LEFT_BTN   = 5;
-    const int RIGHT_BTN  = 6;
+    const int ENGINE_BTN = 26;
+    const int ACCEL_BTN  = 13;
+    const int BRAKE_BTN  = 19;
+    const int LEFT_BTN   = 6;
+    const int RIGHT_BTN  = 5;
 
     const int LEFT_LED   = 23;
     const int RIGHT_LED  = 24;

@@ -18,25 +18,11 @@ Window {
         z: 100
         opacity: 1.0
 
-        Text {
-            id: splashTitle
-            text: "    Gauge Cluster                  Mahmoud Sayed"
-            color: "white"
-            font.pixelSize: 80
-            font.bold: true
-            anchors.centerIn: parent
-            opacity: 0.0
-
-            SequentialAnimation on opacity {
-                NumberAnimation { from: 0; to: 0.4; duration: 900; easing.type: Easing.InOutQuad }
-                PauseAnimation { duration: 1000 }
-                NumberAnimation { from: 0.4; to: 0; duration: 900; easing.type: Easing.InOutQuad }
-            }
-        }
-
+        // Center Gauge Animation
         CircularGauge {
             id: splashGauge
-            anchors.centerIn: parent
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
             width: 300
             height: 300
             maxValue: 180
@@ -55,13 +41,65 @@ Window {
             }
         }
 
-        SequentialAnimation {
-            running: true
-            NumberAnimation { target: splashScreen; property: "opacity"; from: 1; to: 1; duration: 2800 }
-            NumberAnimation { target: splashScreen; property: "opacity"; from: 1; to: 0; duration: 800 }
-            onStopped: splashScreen.visible = false
+        // "TOYOTA SUPRA" Label Under Gauge
+        Text {
+            id: splashTitle
+            text: "TOYOTA  SUPRA"
+            color: "red"
+            font.pixelSize: 64
+            font.bold: true
+            anchors.horizontalCenter: splashGauge.horizontalCenter
+            anchors.top: splashGauge.bottom
+            anchors.topMargin: 40
+            opacity: 0.0
+
+            SequentialAnimation on opacity {
+                PauseAnimation { duration: 400 }
+                NumberAnimation { from: 0; to: 1; duration: 800; easing.type: Easing.OutQuad }
+                PauseAnimation { duration: 1000 }
+                NumberAnimation { from: 1; to: 0; duration: 800; easing.type: Easing.InQuad }
+            }
+        }
+
+        // Welcome Message at Bottom
+        Text {
+            id: welcomeMessage
+            text: "Welcome, Mahmoud Sayed"
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.bottom: parent.bottom
+            anchors.bottomMargin: 130
+            font.pixelSize: 36
+            color: "white"
+            opacity: 0.0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 1500; easing.type: Easing.InOutQuad }
+            }
+            Component.onCompleted: opacity = 1.0
+        }
+
+        // Timer to trigger dashboard after splash
+        Timer {
+            id: startDashboardTimer
+            interval: 4000    // total splash duration
+            repeat: false
+            onTriggered: {
+                // Hide splash and start dashboard animation directly
+                splashScreen.visible = false
+                dashboardStartup.start()
+            }
+        }
+
+        // Start splash + timer automatically
+        Component.onCompleted: startDashboardTimer.start()
+
+        // Fade out splash
+        SequentialAnimation on opacity {
+            PauseAnimation { duration: 3200 }
+            NumberAnimation { from: 1; to: 0; duration: 800 }
         }
     }
+
 
     // ---------- Dashboard ----------
     Rectangle {
@@ -77,47 +115,42 @@ Window {
             anchors.horizontalCenter: parent.horizontalCenter
             anchors.topMargin: 30
 
-            // Engine LED
-            Column {
-                spacing: 5
-                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.engineOn ? "green" : "gray" }
+            Column { spacing: 5
+                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.engineOn ? "#0af01d" : "gray" }
                 Text { text: "Engine"; color: "white"; font.bold: true }
             }
-
-            // Battery LED
-            Column {
-                spacing: 5
+            Column { spacing: 5
                 Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.batteryLow ? "red" : "gray" }
                 Text { text: "Battery"; color: "white"; font.bold: true }
             }
-
-            // Oil LED
-            Column {
-                spacing: 5
+            Column { spacing: 5
                 Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.oilLow ? "red" : "gray" }
                 Text { text: "Oil"; color: "white"; font.bold: true }
             }
-
-            // Seatbelt LED
-            Column {
-                spacing: 5
+            Column { spacing: 5
                 Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.seatbeltOn ? "yellow" : "gray" }
                 Text { text: "Seatbelt"; color: "white"; font.bold: true }
             }
-
-            // Left Signal LED
-            Column {
-                spacing: 5
-                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.leftSignalOn ? "orange" : "gray" }
+            Column { spacing: 5
+                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.leftSignalOn ? "white" : "gray" }
                 Text { text: "Left"; color: "white"; font.bold: true }
             }
-
-            // Right Signal LED
-            Column {
-                spacing: 5
-                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.rightSignalOn ? "orange" : "gray" }
+            Column { spacing: 5
+                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.rightSignalOn ? "white" : "gray" }
                 Text { text: "Right"; color: "white"; font.bold: true }
             }
+        }
+
+        // ---------- Compass ----------
+        Compass {
+            id: dashboardCompass
+            anchors.left: parent.left
+            anchors.top: parent.top
+            anchors.leftMargin: 40
+            anchors.topMargin: 40
+            width: 140
+            height: 140
+            heading: compassController.heading
         }
 
         // ---------- Tachometer (Left) ----------
@@ -132,39 +165,35 @@ Window {
             width: parent.width * 0.22
             height: parent.height * 0.45
             progressColor: value > 6.5 ? "red" : "lime"
-            needleColor: "white"
+            needleColor: "orange"
             centerDotColor: "gray"
+            unitLabel: "RPM"
             majorTicks: 4
+            visible: false
+            opacity: 0
+            x: -parent.width * 0.2
 
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.verticalCenter
                 anchors.topMargin: strokeWidth * 2
                 spacing: 4
-                Text {
-                    text: value.toFixed(1)
-                    font.pixelSize: 20
-                    font.bold: true
-                    color: root.value > 6.5 ? "red" : "white"
-                }
-                Text {
-                    text: "x1000 RPM"
-                    font.pixelSize: 14
-                    color: "lightgray"
-                }
+                Text { text: value.toFixed(1); font.pixelSize: 20; font.bold: true; color: root.value > 6.5 ? "red" : "white" }
+                Text { text: "x1000 RPM"; font.pixelSize: 14; color: "lightgray" }
             }
         }
 
-        // ---------- Digital Clock (Above Speedometer) ----------
+        // ---------- Digital Clock (Bottom Right) ----------
         DigitalClock {
             id: dashboardClock
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.bottom: speedometer.top
-            anchors.topMargin: 20
-            // anchors.bottomMargin: 30
+            anchors.right: parent.right
+            anchors.bottom: parent.bottom
+            anchors.rightMargin: 80
+            anchors.bottomMargin: 40
             glowColor: "#00eaff"
-            textColor: "grey"
-            fontSize: 90
+            textColor: "white"
+            fontSize: 85
+            opacity: 0
         }
 
         // ---------- Speedometer (Center) ----------
@@ -177,24 +206,19 @@ Window {
             height: parent.height * 0.6
             maxValue: 180
             progressColor: value > 120 ? "red" : "cyan"
-            needleColor: "white"
+            needleColor: "red"
+            unitLabel: "km/h"
+            visible: false
+            opacity: 0
+            scale: 0.6
 
             Row {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.verticalCenter
                 anchors.topMargin: strokeWidth * 2
                 spacing: 4
-                Text {
-                    text: Math.round(root.value)
-                    font.pixelSize: 30
-                    font.bold: true
-                    color: root.value > 120 ? "red" : "white"
-                }
-                Text {
-                    text: "km/h"
-                    font.pixelSize: 18
-                    color: "lightgray"
-                }
+                Text { text: Math.round(root.value); font.pixelSize: 30; font.bold: true; color: root.value > 120 ? "red" : "white" }
+                Text { text: "km/h"; font.pixelSize: 18; color: "lightgray" }
             }
         }
 
@@ -202,7 +226,7 @@ Window {
         CircularGauge {
             id: tempGauge
             value: temperatureController.temperature
-            minValue: 50
+            minValue: 0
             maxValue: 130
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
@@ -212,28 +236,23 @@ Window {
             progressColor: value > 110 ? "red" : "cyan"
             needleColor: "orange"
             centerDotColor: "white"
+            unitLabel: "°C"
             majorTicks: 4
+            visible: false
+            opacity: 0
+            x: parent.width * 1.2
 
             Column {
                 anchors.horizontalCenter: parent.horizontalCenter
                 anchors.top: parent.verticalCenter
                 anchors.topMargin: strokeWidth * 2
                 spacing: 4
-                Text {
-                    text: Math.round(root.value)
-                    font.pixelSize: 20
-                    font.bold: true
-                    color: root.value > 110 ? "red" : "white"
-                }
-                Text {
-                    text: "c"
-                    font.pixelSize: 14
-                    color: "lightgray"
-                }
+                Text { text: Math.round(root.value); font.pixelSize: 20; font.bold: true; color: root.value > 110 ? "red" : "white" }
+                Text { text: "°C"; font.pixelSize: 14; color: "lightgray" }
             }
         }
 
-        // ---------- Seat Control (Bottom Center) ----------
+        // ---------- Seat Control ----------
         Item {
             id: seatGroup
             width: 240
@@ -242,7 +261,6 @@ Window {
             anchors.bottomMargin: 80
             anchors.horizontalCenter: parent.horizontalCenter
 
-            // Seat Base (fixed)
             Rectangle {
                 id: seatBase
                 width: 140
@@ -253,7 +271,6 @@ Window {
                 anchors.horizontalCenter: parent.horizontalCenter
             }
 
-            // Seat Back (controlled from C++)
             Rectangle {
                 id: seatBack
                 width: 20
@@ -261,20 +278,16 @@ Window {
                 radius: 10
                 color: "#888"
                 anchors.bottom: seatBase.top
-                anchors.right: seatBase.right  // fixed to back-right edge
+                anchors.right: seatBase.right
                 transform: Rotation {
                     id: seatBackRotation
                     origin.x: seatBack.width
                     origin.y: seatBack.height
                     angle: seatController.seatBackAngle
                 }
-
-                Behavior on transform {
-                    NumberAnimation { duration: 250; easing.type: Easing.InOutQuad }
-                }
+                Behavior on transform { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
             }
 
-            // Headrest moves with the back
             Rectangle {
                 id: headRest
                 width: 40
@@ -291,7 +304,6 @@ Window {
                 }
             }
 
-            // Seat label
             Text {
                 anchors.top: seatBase.bottom
                 anchors.topMargin: 5
@@ -319,6 +331,37 @@ Window {
             else if (event.key === Qt.Key_Down) speedController.stopBraking()
             else if (event.key === Qt.Key_Right) seatController.stopForward()
             else if (event.key === Qt.Key_Left) seatController.stopBackward()
+        }
+
+        // ---------- Startup Animation ----------
+        SequentialAnimation {
+            id: dashboardStartup
+            running: false
+            PropertyAction { target: speedometer; property: "visible"; value: true }
+
+            ParallelAnimation {
+                NumberAnimation { target: speedometer; property: "opacity"; from: 0; to: 1; duration: 800; easing.type: Easing.InOutQuad }
+                NumberAnimation { target: speedometer; property: "scale"; from: 0.6; to: 1.0; duration: 800; easing.type: Easing.OutBack }
+            }
+
+            PauseAnimation { duration: 400 }
+
+            ParallelAnimation {
+                PropertyAction { target: tachometer; property: "visible"; value: true }
+                PropertyAction { target: tempGauge; property: "visible"; value: true }
+
+                NumberAnimation { target: tachometer; property: "x"; to: parent.width * 0.08; duration: 700; easing.type: Easing.OutCubic }
+                NumberAnimation { target: tempGauge; property: "x"; to: parent.width - tempGauge.width - parent.width * 0.08; duration: 700; easing.type: Easing.OutCubic }
+
+                NumberAnimation { target: tachometer; property: "opacity"; from: 0; to: 1; duration: 700 }
+                NumberAnimation { target: tempGauge; property: "opacity"; from: 0; to: 1; duration: 700 }
+            }
+
+            PauseAnimation { duration: 300 }
+
+            ParallelAnimation {
+                NumberAnimation { target: dashboardClock; property: "opacity"; from: 0; to: 1; duration: 600 }
+            }
         }
     }
 }
