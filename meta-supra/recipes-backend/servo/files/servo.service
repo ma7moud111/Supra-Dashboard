@@ -1,0 +1,15 @@
+[Unit]
+Description=GPIO Buttons Logger Service
+After=multi-user.target
+
+[Service]
+ExecStart=/usr/bin/servo
+WorkingDirectory=/home/weston
+
+Restart=always
+RestartSec=3
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
+

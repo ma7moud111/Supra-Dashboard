@@ -7,8 +7,9 @@ IMAGE_FEATURES:append = " splash package-management ssh-server-dropbear hwcodecs
 # Remove uneeded 
 IMAGE_FEATURES:remove = "ssh-server-dropbear"
 # Image Install apps
-IMAGE_INSTALL:append = " python3 bash tcpdump openssh wifi-config rdp-certs tictactoe tictactoe-service user-supra"
+IMAGE_INSTALL:append = " python3 bash tcpdump openssh psplash wifi-config rdp-certs tictactoe dashboard-service user-supra gpio-driver servo button "
 #IMAGE_INSTALL:remove = " weston-xwayland"
+#CORE_IMAGE_EXTRA_INSTALL:append = " plymouth"
 
 EXTRA_IMAGE_FEATURES ?= "debug-tweaks ssh-server-openssh"
 

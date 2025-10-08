@@ -1,0 +1,16 @@
+[Unit]
+Description=GPIO Buttons Logger Service
+
+[Service]
+ExecStart=/usr/bin/button
+Restart=always
+RestartSec=3
+Type=simple
+WorkingDirectory=/home/weston
+StandardOutput=append:/var/log/button_service.log
+StandardError=append:/var/log/button_service.log
+After=multi-user.target
+
+[Install]
+WantedBy=multi-user.target
+

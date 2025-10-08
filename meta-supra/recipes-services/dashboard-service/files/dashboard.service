@@ -1,5 +1,5 @@
 [Unit]
-Description=Qt6 Dashboard (tictactoe)
+Description=Qt6 Dashboard (SupraAAAA Dashboard)
 After=weston.service
 Requires=weston.service
 
@@ -15,10 +15,10 @@ Environment=QT_DEBUG_PLUGINS=1
 # Wait for Wayland socket before launching
 ExecStartPre=/bin/sh -c 'until [ -S /run/user/1000/wayland-1 ]; do sleep 1; done'
 # Stop splash before launching
-ExecStartPre=-/usr/bin/psplash-write QUIT
+##ExecStartPre=-/usr/bin/psplash-write QUIT
 
 # Launch the app
-ExecStart=/usr/bin/appxo
+ExecStart=/usr/bin/appdashboardhw
 
 Restart=on-failure
 RestartSec=2
