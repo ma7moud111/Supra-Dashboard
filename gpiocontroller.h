@@ -17,7 +17,9 @@ public:
 signals:
     void engineButtonPressed();
     void accelButtonPressed();
+    void accelButtonReleased();
     void brakeButtonPressed();
+    void brakeButtonReleased();
     void leftSignalButtonPressed();
     void rightSignalButtonPressed();
 

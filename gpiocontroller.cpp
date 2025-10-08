@@ -8,7 +8,7 @@ using namespace std;
 
 GpioController::GpioController(QObject *parent) : QObject(parent) {
     connect(&m_pollTimer, &QTimer::timeout, this, &GpioController::updateInputs);
-    m_pollTimer.setInterval(100);
+    m_pollTimer.setInterval(100);  // poll every 100ms
 }
 
 GpioController::~GpioController() {
@@ -68,7 +68,7 @@ void GpioController::setDirection(int pin, const string &direction) {
 }
 
 int GpioController::readGpioValue(int pin) {
-    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
+    string path = "/sys/class/gpio/gpiomod" + to_string(pin) + "/value";
     ifstream valFile(path);
     int value = 1;
     if (valFile.is_open()) {
@@ -79,7 +79,7 @@ int GpioController::readGpioValue(int pin) {
 }
 
 void GpioController::writeGpioValue(int pin, int value) {
-    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
+    string path = "/sys/class/gpio/gpiomod" + to_string(pin) + "/value";
     ofstream valFile(path);
     if (valFile.is_open()) {
         valFile << value;
@@ -94,11 +94,20 @@ void GpioController::updateInputs() {
     int left   = readGpioValue(LEFT_BTN);
     int right  = readGpioValue(RIGHT_BTN);
 
+    // Rising/falling edge detection
     if (engine == 0 && lastEngineState == 1) emit engineButtonPressed();
-    if (accel  == 0 && lastAccelState  == 1) emit accelButtonPressed();
-    if (brake  == 0 && lastBrakeState  == 1) emit brakeButtonPressed();
-    if (left   == 0 && lastLeftState   == 1) emit leftSignalButtonPressed();
-    if (right  == 0 && lastRightState  == 1) emit rightSignalButtonPressed();
+
+    // Accelerate: hold detection
+    if (accel == 0 && lastAccelState == 1) emit accelButtonPressed();   // pressed down
+    if (accel == 1 && lastAccelState == 0) emit accelButtonReleased();  // released
+
+    // Brake: hold detection
+    if (brake == 0 && lastBrakeState == 1) emit brakeButtonPressed();
+    if (brake == 1 && lastBrakeState == 0) emit brakeButtonReleased();
+
+    // Left / right signals (toggle)
+    if (left == 0 && lastLeftState == 1) emit leftSignalButtonPressed();
+    if (right == 0 && lastRightState == 1) emit rightSignalButtonPressed();
 
     lastEngineState = engine;
     lastAccelState  = accel;

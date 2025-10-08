@@ -1,6 +1,8 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QTimer>
+
 #include "speedcontroller.h"
 #include "SeatController.h"
 #include "dashboardcontroller.h"
@@ -13,6 +15,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
 
+    // --- Instantiate controllers ---
     SpeedController speedController;
     SeatController seatController;
     DashboardController dashboardController;
@@ -20,10 +23,7 @@ int main(int argc, char *argv[])
     TemperatureController temperatureController;
     GpioController gpioController;
 
-
-
-
-    // --- Initialize GPIO ---
+    // --- Initialize GPIO pins ---
     gpioController.init();
 
     // --- GPIO Button → Dashboard Logic Connections ---
@@ -31,22 +31,26 @@ int main(int argc, char *argv[])
         dashboardController.setEngineOn(!dashboardController.engineOn());
     });
 
+    // Continuous acceleration while button held
     QObject::connect(&gpioController, &GpioController::accelButtonPressed, [&]() {
-        // Pressing accelerate increases speed temporarily
         speedController.startAcceleration();
-        QTimer::singleShot(200, [&]() { speedController.stopAcceleration(); });
+    });
+    QObject::connect(&gpioController, &GpioController::accelButtonReleased, [&]() {
+        speedController.stopAcceleration();
     });
 
+    // Continuous braking while button held
     QObject::connect(&gpioController, &GpioController::brakeButtonPressed, [&]() {
-        // Pressing brake decreases speed temporarily
         speedController.startBraking();
-        QTimer::singleShot(200, [&]() { speedController.stopBraking(); });
+    });
+    QObject::connect(&gpioController, &GpioController::brakeButtonReleased, [&]() {
+        speedController.stopBraking();
     });
 
+    // Left / Right signals toggle
     QObject::connect(&gpioController, &GpioController::leftSignalButtonPressed, [&]() {
         dashboardController.toggleLeftSignal();
     });
-
     QObject::connect(&gpioController, &GpioController::rightSignalButtonPressed, [&]() {
         dashboardController.toggleRightSignal();
     });
@@ -54,7 +58,6 @@ int main(int argc, char *argv[])
     // --- Dashboard LED ↔ Physical GPIO LED Sync ---
     QObject::connect(&dashboardController, &DashboardController::leftSignalOnChanged,
                      &gpioController, &GpioController::handleLeftSignal);
-
     QObject::connect(&dashboardController, &DashboardController::rightSignalOnChanged,
                      &gpioController, &GpioController::handleRightSignal);
 
@@ -63,10 +66,7 @@ int main(int argc, char *argv[])
         gpioController.cleanup();
     });
 
-
-
-
-    // Engine state connections
+    // --- Engine state ↔ other subsystems ---
     QObject::connect(&dashboardController, &DashboardController::engineOnChanged,
                      [&](bool on) {
                          speedController.setEngineRunning(on);
@@ -79,12 +79,14 @@ int main(int argc, char *argv[])
                          tachometerController.updateRpm(newSpeed, dashboardController.engineOn());
                      });
 
+    // --- Expose controllers to QML ---
     engine.rootContext()->setContextProperty("speedController", &speedController);
     engine.rootContext()->setContextProperty("seatController", &seatController);
     engine.rootContext()->setContextProperty("dashboardController", &dashboardController);
     engine.rootContext()->setContextProperty("tachometerController", &tachometerController);
     engine.rootContext()->setContextProperty("temperatureController", &temperatureController);
 
+    // --- Load the main dashboard UI ---
     const QUrl url(QStringLiteral("qrc:/dashboardhw/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
@@ -92,7 +94,8 @@ int main(int argc, char *argv[])
                              QCoreApplication::exit(-1);
                      }, Qt::QueuedConnection);
 
-    qDebug() << "Starting application. If GPIO export fails, try running with sudo.";
+    qDebug() << "Starting application (GPIO press-and-hold mode enabled).";
     engine.load(url);
+
     return app.exec();
 }
