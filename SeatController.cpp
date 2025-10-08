@@ -47,3 +47,17 @@ void SeatController::updateSeatPosition()
         emit seatBackAngleChanged(m_seatBackAngle);
     }
 }
+
+void SeatController::setSeatBackAngleFromSensor(int angle)
+{
+    // Clamp and apply smoothing (to prevent jumpy seat motion)
+    qreal targetAngle = qBound(0.0, static_cast<qreal>(angle), 45.0);
+
+    // Optional smoothing: interpolate toward target
+    qreal smoothedAngle = m_seatBackAngle + (targetAngle - m_seatBackAngle) * 0.2;
+
+    if (!qFuzzyCompare(smoothedAngle, m_seatBackAngle)) {
+        m_seatBackAngle = smoothedAngle;
+        emit seatBackAngleChanged(m_seatBackAngle);
+    }
+}

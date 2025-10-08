@@ -79,7 +79,7 @@ int GpioController::readGpioValue(int pin) {
 }
 
 void GpioController::writeGpioValue(int pin, int value) {
-    string path = "/sys/class/gpio/gpiomod" + to_string(pin) + "/value";
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
     ofstream valFile(path);
     if (valFile.is_open()) {
         valFile << value;
