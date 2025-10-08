@@ -68,7 +68,7 @@ void GpioController::setDirection(int pin, const string &direction) {
 }
 
 int GpioController::readGpioValue(int pin) {
-    string path = "/sys/class/gpio/gpiomod" + to_string(pin) + "/value";
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
     ifstream valFile(path);
     int value = 1;
     if (valFile.is_open()) {
