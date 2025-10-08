@@ -132,11 +132,11 @@ Window {
                 Text { text: "Seatbelt"; color: "white"; font.bold: true }
             }
             Column { spacing: 5
-                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.leftSignalOn ? "white" : "gray" }
+                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.leftSignalOn ? "yellow" : "gray" }
                 Text { text: "Left"; color: "white"; font.bold: true }
             }
             Column { spacing: 5
-                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.rightSignalOn ? "white" : "gray" }
+                Rectangle { width: 30; height: 30; radius: 15; color: dashboardController.rightSignalOn ? "yellow" : "gray" }
                 Text { text: "Right"; color: "white"; font.bold: true }
             }
         }
