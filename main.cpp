@@ -1,6 +1,8 @@
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
+#include <QTimer>
+
 #include "speedcontroller.h"
 #include "SeatController.h"
 #include "dashboardcontroller.h"
@@ -13,60 +15,48 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     QQmlApplicationEngine engine;
 
+    // --- Instantiate controllers ---
     SpeedController speedController;
     SeatController seatController;
     DashboardController dashboardController;
     TachometerController tachometerController;
     TemperatureController temperatureController;
-    GpioController gpioController;
+    GpioController gpioController;   // Now reads from CSV file
 
+    qDebug() << "Starting Car Dashboard Simulation (CSV GPIO Mode)...";
 
+    // --- Connect CSV-based GPIO events ---
+    QObject::connect(&gpioController, &GpioController::buttonsUpdated, [&]() {
 
+        // Engine button (button1)
+        if (!gpioController.button1Pressed()) {
+            dashboardController.setEngineOn(!dashboardController.engineOn());
+        }
 
-    // --- Initialize GPIO ---
-    gpioController.init();
+        // Accelerate button (button2)
+        if (!gpioController.button2Pressed()) {
+            speedController.startAcceleration();
+            QTimer::singleShot(200, [&]() { speedController.stopAcceleration(); });
+        }
 
-    // --- GPIO Button → Dashboard Logic Connections ---
-    QObject::connect(&gpioController, &GpioController::engineButtonPressed, [&]() {
-        dashboardController.setEngineOn(!dashboardController.engineOn());
+        // Brake button (button3)
+        if (!gpioController.button3Pressed()) {
+            speedController.startBraking();
+            QTimer::singleShot(200, [&]() { speedController.stopBraking(); });
+        }
+
+        // Left signal (button4)
+        if (!gpioController.button4Pressed()) {
+            dashboardController.toggleLeftSignal();
+        }
+
+        // Right signal (button5)
+        if (!gpioController.button5Pressed()) {
+            dashboardController.toggleRightSignal();
+        }
     });
 
-    QObject::connect(&gpioController, &GpioController::accelButtonPressed, [&]() {
-        // Pressing accelerate increases speed temporarily
-        speedController.startAcceleration();
-        QTimer::singleShot(200, [&]() { speedController.stopAcceleration(); });
-    });
-
-    QObject::connect(&gpioController, &GpioController::brakeButtonPressed, [&]() {
-        // Pressing brake decreases speed temporarily
-        speedController.startBraking();
-        QTimer::singleShot(200, [&]() { speedController.stopBraking(); });
-    });
-
-    QObject::connect(&gpioController, &GpioController::leftSignalButtonPressed, [&]() {
-        dashboardController.toggleLeftSignal();
-    });
-
-    QObject::connect(&gpioController, &GpioController::rightSignalButtonPressed, [&]() {
-        dashboardController.toggleRightSignal();
-    });
-
-    // --- Dashboard LED ↔ Physical GPIO LED Sync ---
-    QObject::connect(&dashboardController, &DashboardController::leftSignalOnChanged,
-                     &gpioController, &GpioController::handleLeftSignal);
-
-    QObject::connect(&dashboardController, &DashboardController::rightSignalOnChanged,
-                     &gpioController, &GpioController::handleRightSignal);
-
-    // --- Graceful cleanup on exit ---
-    QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
-        gpioController.cleanup();
-    });
-
-
-
-
-    // Engine state connections
+    // --- Engine on/off → RPM + temperature + speed sync ---
     QObject::connect(&dashboardController, &DashboardController::engineOnChanged,
                      [&](bool on) {
                          speedController.setEngineRunning(on);
@@ -74,17 +64,21 @@ int main(int argc, char *argv[])
                          temperatureController.setEngineOn(on);
                      });
 
+    // --- Speed change → RPM sync ---
     QObject::connect(&speedController, &SpeedController::speedChanged,
                      [&](int newSpeed) {
                          tachometerController.updateRpm(newSpeed, dashboardController.engineOn());
                      });
 
+    // --- Expose controllers to QML ---
     engine.rootContext()->setContextProperty("speedController", &speedController);
     engine.rootContext()->setContextProperty("seatController", &seatController);
     engine.rootContext()->setContextProperty("dashboardController", &dashboardController);
     engine.rootContext()->setContextProperty("tachometerController", &tachometerController);
     engine.rootContext()->setContextProperty("temperatureController", &temperatureController);
+    engine.rootContext()->setContextProperty("gpioController", &gpioController);
 
+    // --- Load main QML ---
     const QUrl url(QStringLiteral("qrc:/dashboardhw/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
@@ -92,7 +86,10 @@ int main(int argc, char *argv[])
                              QCoreApplication::exit(-1);
                      }, Qt::QueuedConnection);
 
-    qDebug() << "Starting application. If GPIO export fails, try running with sudo.";
     engine.load(url);
+
+    qDebug() << "Dashboard started successfully.";
+    qDebug() << "Monitoring button states from /home/weston/buttons_log.csv ...";
+
     return app.exec();
 }
