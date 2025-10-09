@@ -34,7 +34,7 @@ void TemperatureController::updateTemperature()
             m_temperature = qBound(90, m_temperature + delta, 110);
         }
     } else {
-        // Cool down slowly toward ambient (around 0–10°C)
+        // Cool down slowly toward ambient (around 0–10 C)
         if (m_temperature > 10) {
             m_temperature -= 1;
         }

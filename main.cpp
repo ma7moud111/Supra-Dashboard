@@ -107,7 +107,5 @@ int main(int argc, char *argv[])
     qDebug() << "Dashboard running with file-based seat angle input (/home/weston/data.csv).";
     engine.load(url);
 
-    // No startReading() call necessary — FileSeatReader polls in its constructor.
-
     return app.exec();
 }

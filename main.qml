@@ -41,7 +41,7 @@ Window {
             }
         }
 
-        // "TOYOTA SUPRA" Label Under Gauge
+        // Label Under Gauge
         Text {
             id: splashTitle
             text: "TOYOTA  SUPRA"
@@ -188,12 +188,12 @@ Window {
             id: dashboardClock
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.rightMargin: 80
+            anchors.rightMargin: 40
             anchors.bottomMargin: 40
             glowColor: "#00eaff"
             textColor: "white"
-            fontSize: 85
-            opacity: 0
+            fontSize: 54
+            opacity: 0.1
         }
 
         // ---------- Speedometer (Center) ----------

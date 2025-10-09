@@ -40,7 +40,7 @@ Item {
         anchors.centerIn: parent
         text: Qt.formatTime(new Date(), showSeconds ? "hh:mm:ss" : "hh:mm")
         font.pixelSize: root.fontSize
-        // font.bold: true
+        font.bold: true
         font.family: "Consolas"
         color: root.textColor
         horizontalAlignment: Text.AlignHCenter
