@@ -14,6 +14,7 @@ Item {
     property real startAngle: 135
     property real sweepAngle: 270
     property int majorTicks: 9
+     property string unitLabel: "km/h"
 
     implicitWidth: 250
     implicitHeight: 250
@@ -149,7 +150,7 @@ Item {
             color: root.value > 120 ? "red" : "white"   // Changes color if > 120
         }
         Text {
-            text: "km/h"
+            text: root.unitLabel
             font.pixelSize: 16
             color: "lightgray"
         }

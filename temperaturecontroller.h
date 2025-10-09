@@ -20,10 +20,13 @@ public slots:
 signals:
     void temperatureChanged(int temperature);
 
+private slots:
+    void updateTemperature();
+
 private:
-    int m_temperature;      // degrees Celsius
+    int m_temperature;   // current temperature in C
     bool m_engineOn;
-    QTimer m_updateTimer;
+    QTimer m_timer;
 };
 
 #endif // TEMPERATURECONTROLLER_H

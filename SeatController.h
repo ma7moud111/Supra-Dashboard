@@ -3,37 +3,37 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QtMath>
 
 class SeatController : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(int seatPosition READ seatPosition NOTIFY seatPositionChanged)
     Q_PROPERTY(qreal seatBackAngle READ seatBackAngle NOTIFY seatBackAngleChanged)
 
 public:
     explicit SeatController(QObject *parent = nullptr);
 
-    int seatPosition() const { return m_seatPosition; }
     qreal seatBackAngle() const { return m_seatBackAngle; }
+    qreal seatPosition() const { return m_seatPosition; }
 
 public slots:
     void startForward();
     void startBackward();
     void stopForward();
     void stopBackward();
+    void setSeatBackAngleFromSensor(int angle);
 
 signals:
-    void seatPositionChanged(int seatPosition);
-    void seatBackAngleChanged(qreal seatBackAngle);
+    void seatBackAngleChanged(qreal angle);
 
 private slots:
     void updateSeatPosition();
 
 private:
-    int m_seatPosition;       // seat linear position (optional for future)
-    qreal m_seatBackAngle;    // rotation angle
+    qreal m_seatPosition;
+    qreal m_seatBackAngle;
+    int m_direction;
     QTimer m_timer;
-    int m_direction;          // 1 for forward (recline), -1 for backward
 };
 
 #endif // SEATCONTROLLER_H

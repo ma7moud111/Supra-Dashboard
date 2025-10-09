@@ -1,141 +1,125 @@
-// gpiocontroller.cpp (new file)
 #include "gpiocontroller.h"
-#include "dashboardcontroller.h"
-#include "speedcontroller.h"
+#include <iostream>
+#include <fstream>
+#include <string>
+#include <unistd.h>
 
-#include <QFile>
-#include <QTextStream>
-#include <QTimer>
-#include <QDebug>
+using namespace std;
 
-GpioController::GpioController(DashboardController *dc, SpeedController *sc, QObject *parent)
-    : QObject(parent), m_dc(dc), m_sc(sc) {
-    // Export GPIOs
-    exportGpio(ENGINE_BUTTON_PIN);
-    exportGpio(ACCEL_BUTTON_PIN);
-    exportGpio(BRAKE_BUTTON_PIN);
-    exportGpio(LEFT_SIGNAL_BUTTON_PIN);
-    exportGpio(RIGHT_SIGNAL_BUTTON_PIN);
-    exportGpio(LEFT_LED_PIN);
-    exportGpio(RIGHT_LED_PIN);
-
-    setDirection(ENGINE_BUTTON_PIN, "in");
-    setDirection(ACCEL_BUTTON_PIN, "in");
-    setDirection(BRAKE_BUTTON_PIN, "in");
-    setDirection(LEFT_SIGNAL_BUTTON_PIN, "in");
-    setDirection(RIGHT_SIGNAL_BUTTON_PIN, "in");
-    setDirection(LEFT_LED_PIN, "out");
-    setDirection(RIGHT_LED_PIN, "out");
-
-
-    writeGpio(LEFT_LED_PIN, 0);
-    writeGpio(RIGHT_LED_PIN, 0);
-
-
-    connect(m_dc, &DashboardController::leftSignalOnChanged, [this](bool on) {
-        writeGpio(LEFT_LED_PIN, on ? 1 : 0);
-    });
-    connect(m_dc, &DashboardController::rightSignalOnChanged, [this](bool on) {
-        writeGpio(RIGHT_LED_PIN, on ? 1 : 0);
-    });
-
-
-    QTimer *timer = new QTimer(this);
-    connect(timer, &QTimer::timeout, this, &GpioController::pollButtons);
-    timer->start(50);
-
-
-    m_prevEngine = readGpio(ENGINE_BUTTON_PIN);
-    m_prevAccel = readGpio(ACCEL_BUTTON_PIN);
-    m_prevBrake = readGpio(BRAKE_BUTTON_PIN);
-    m_prevLeftSig = readGpio(LEFT_SIGNAL_BUTTON_PIN);
-    m_prevRightSig = readGpio(RIGHT_SIGNAL_BUTTON_PIN);
+GpioController::GpioController(QObject *parent) : QObject(parent) {
+    connect(&m_pollTimer, &QTimer::timeout, this, &GpioController::updateInputs);
+    m_pollTimer.setInterval(100);  // poll every 100ms
 }
 
-void GpioController::pollButtons() {
+GpioController::~GpioController() {
+    cleanup();
+}
 
-    int currEngine = readGpio(ENGINE_BUTTON_PIN);
-    if (currEngine == 0 && m_prevEngine == 1) {
-        m_dc->setEngineOn(!m_dc->engineOn());
+void GpioController::init() {
+    int inputPins[] = {ENGINE_BTN, ACCEL_BTN, BRAKE_BTN, LEFT_BTN, RIGHT_BTN};
+    int outputPins[] = {LEFT_LED, RIGHT_LED};
+
+    for (int pin : inputPins) {
+        exportGpio(pin);
+        setDirection(pin, "in");
     }
-    m_prevEngine = currEngine;
 
-
-    int currAccel = readGpio(ACCEL_BUTTON_PIN);
-    if (currAccel == 0 && m_prevAccel == 1) {
-        m_sc->startAcceleration();
-    } else if (currAccel == 1 && m_prevAccel == 0) {
-        m_sc->stopAcceleration();
+    for (int pin : outputPins) {
+        exportGpio(pin);
+        setDirection(pin, "out");
+        writeGpioValue(pin, 0);
     }
-    m_prevAccel = currAccel;
 
+    m_pollTimer.start();
+}
 
-    int currBrake = readGpio(BRAKE_BUTTON_PIN);
-    if (currBrake == 0 && m_prevBrake == 1) {
-        m_sc->startBraking();
-    } else if (currBrake == 1 && m_prevBrake == 0) {
-        m_sc->stopBraking();
-    }
-    m_prevBrake = currBrake;
-
-
-    int currLeft = readGpio(LEFT_SIGNAL_BUTTON_PIN);
-    if (currLeft == 0 && m_prevLeftSig == 1) {
-        m_dc->toggleLeftSignal();
-    }
-    m_prevLeftSig = currLeft;
-
-    // Right signal toggle on falling edge
-    int currRight = readGpio(RIGHT_SIGNAL_BUTTON_PIN);
-    if (currRight == 0 && m_prevRightSig == 1) {
-        m_dc->toggleRightSignal();
-    }
-    m_prevRightSig = currRight;
+void GpioController::cleanup() {
+    int allPins[] = {ENGINE_BTN, ACCEL_BTN, BRAKE_BTN, LEFT_BTN, RIGHT_BTN, LEFT_LED, RIGHT_LED};
+    for (int pin : allPins)
+        unexportGpio(pin);
 }
 
 void GpioController::exportGpio(int pin) {
-    QFile file("/sys/class/gpio/export");
-    if (file.open(QIODevice::WriteOnly)) {
-        QTextStream out(&file);
-        out << pin;
-        file.close();
-    } else {
-        qDebug() << "Failed to export GPIO" << pin;
+    ofstream exportFile("/sys/class/gpio/export");
+    if (exportFile.is_open()) {
+        exportFile << pin;
+        exportFile.close();
+        usleep(100000);
     }
 }
 
-void GpioController::setDirection(int pin, const QString &dir) {
-    QFile file(QString("/sys/class/gpio/gpio%1/direction").arg(pin));
-    if (file.open(QIODevice::WriteOnly)) {
-        QTextStream out(&file);
-        out << dir;
-        file.close();
-    } else {
-        qDebug() << "Failed to set direction for GPIO" << pin;
+void GpioController::unexportGpio(int pin) {
+    ofstream unexportFile("/sys/class/gpio/unexport");
+    if (unexportFile.is_open()) {
+        unexportFile << pin;
+        unexportFile.close();
     }
 }
 
-int GpioController::readGpio(int pin) {
-    QFile file(QString("/sys/class/gpio/gpio%1/value").arg(pin));
-    if (file.open(QIODevice::ReadOnly)) {
-        QTextStream in(&file);
-        QString val;
-        in >> val;
-        file.close();
-        return val.toInt();
+void GpioController::setDirection(int pin, const string &direction) {
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/direction";
+    ofstream dirFile(path);
+    if (dirFile.is_open()) {
+        dirFile << direction;
+        dirFile.close();
     } else {
-        qDebug() << "Failed to read GPIO" << pin;
-        return -1;
+        cerr << "Failed to set direction for GPIO" << pin << endl;
     }
 }
 
-void GpioController::writeGpio(int pin, int val) {
-    QFile file(QString("/sys/class/gpio/gpio%1/value").arg(pin));
-    if (file.open(QIODevice::WriteOnly)) {
-        QTextStream out(&file);
-        out << val;
-        file.close();
-    } else {
-        qDebug() << "Failed to write to GPIO" << pin;
+int GpioController::readGpioValue(int pin) {
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
+    ifstream valFile(path);
+    int value = 1;
+    if (valFile.is_open()) {
+        valFile >> value;
+        valFile.close();
     }
+    return value;
+}
+
+void GpioController::writeGpioValue(int pin, int value) {
+    string path = "/sys/class/gpiomod/gpio" + to_string(pin) + "/value";
+    ofstream valFile(path);
+    if (valFile.is_open()) {
+        valFile << value;
+        valFile.close();
+    }
+}
+
+void GpioController::updateInputs() {
+    int engine = readGpioValue(ENGINE_BTN);
+    int accel  = readGpioValue(ACCEL_BTN);
+    int brake  = readGpioValue(BRAKE_BTN);
+    int left   = readGpioValue(LEFT_BTN);
+    int right  = readGpioValue(RIGHT_BTN);
+
+    // Rising/falling edge detection
+    if (engine == 0 && lastEngineState == 1) emit engineButtonPressed();
+
+    // Accelerate: hold detection
+    if (accel == 0 && lastAccelState == 1) emit accelButtonPressed();   // pressed down
+    if (accel == 1 && lastAccelState == 0) emit accelButtonReleased();  // released
+
+    // Brake: hold detection
+    if (brake == 0 && lastBrakeState == 1) emit brakeButtonPressed();
+    if (brake == 1 && lastBrakeState == 0) emit brakeButtonReleased();
+
+    // Left / right signals (toggle)
+    if (left == 0 && lastLeftState == 1) emit leftSignalButtonPressed();
+    if (right == 0 && lastRightState == 1) emit rightSignalButtonPressed();
+
+    lastEngineState = engine;
+    lastAccelState  = accel;
+    lastBrakeState  = brake;
+    lastLeftState   = left;
+    lastRightState  = right;
+}
+
+void GpioController::handleLeftSignal(bool on) {
+    writeGpioValue(LEFT_LED, on ? 1 : 0);
+}
+
+void GpioController::handleRightSignal(bool on) {
+    writeGpioValue(RIGHT_LED, on ? 1 : 0);
 }
