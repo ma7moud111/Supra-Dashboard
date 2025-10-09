@@ -7,7 +7,7 @@ import QtQuick.Shapes 2.15
 
 Window {
     visible: true
-    visibility: "FullScreen"
+    visibility: "Maximized"
     title: qsTr("Car Dashboard")
 
     // ---------- Splash Screen ----------
