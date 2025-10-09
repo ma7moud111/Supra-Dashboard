@@ -26,6 +26,7 @@ qt_add_qml_module(appdashboardhw
     QML_FILES Compass.qml
     SOURCES compasscontroller.h compasscontroller.cpp
     SOURCES fileseatreader.h fileseatreader.cpp
+    SOURCES weatherreader.h weatherreader.cpp
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

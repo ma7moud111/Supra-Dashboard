@@ -108,6 +108,49 @@ Window {
         color: "black"
         focus: true
 
+        // ---------- Weather Box ----------
+        Rectangle {
+            id: weatherBox
+            width: 180
+            height: 70
+            anchors.bottom: parent.bottom
+            anchors.left: parent.left
+            anchors.bottomMargin: 25
+            anchors.leftMargin: 40
+            radius: 12
+            color: "#101820"
+            border.color: "#00eaff"
+            border.width: 2
+            opacity: 0.9
+
+            Column {
+                anchors.centerIn: parent
+                spacing: 2
+                Text {
+                    text: "Outside"
+                    font.pixelSize: 14
+                    color: "#aaaaaa"
+                }
+
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 8
+                    Text {
+                        text: weatherTemp > 30 ? "☀️" :
+                              weatherTemp > 15 ? "🌤️" :
+                              weatherTemp > 5  ? "☁️" : "❄️"
+                        font.pixelSize: 30
+                    }
+                    Text {
+                        text: weatherTemp.toFixed(1) + " °C"
+                        font.pixelSize: 26
+                        font.bold: true
+                        color: "#00eaff"
+                    }
+                }
+            }
+        }
+
         // ---------- LEDs Row ----------
         Row {
             spacing: 40
@@ -188,11 +231,11 @@ Window {
             id: dashboardClock
             anchors.right: parent.right
             anchors.bottom: parent.bottom
-            anchors.rightMargin: 40
-            anchors.bottomMargin: 40
+            anchors.rightMargin: 20
+            anchors.bottomMargin: 20
             glowColor: "#00eaff"
             textColor: "white"
-            fontSize: 54
+            fontSize: 40
             opacity: 0.1
         }
 

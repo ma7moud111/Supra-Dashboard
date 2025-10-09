@@ -9,7 +9,8 @@
 #include "tachometercontroller.h"
 #include "temperaturecontroller.h"
 #include "gpiocontroller.h"
-#include "fileseatreader.h"   // reads /home/weston/data.csv periodically
+#include "fileseatreader.h"
+#include "weatherreader.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,25 +24,37 @@ int main(int argc, char *argv[])
     TachometerController tachometerController;
     TemperatureController temperatureController;
     GpioController gpioController;
-    FileSeatReader seatReader;  // polls file in ctor
+    FileSeatReader seatReader;
+    WeatherReader weatherReader;
 
-    // --- Initialize GPIO subsystem (if using real GPIO path) ---
+    // --- Initialize GPIO subsystem ---
     gpioController.init();
 
-    // --- Connect CSV reader -> SeatController ---
-    // Note: FileSeatReader already maps pot (0..1023) -> angle (0..45) and emits it.
+    // --- Connect FileSeatReader -> SeatController ---
     QObject::connect(&seatReader, &FileSeatReader::seatAngleReceived,
                      [&](int angle) {
-                         // angle is expected in degrees (0..45) from FileSeatReader
-                         seatController.setSeatBackAngleFromSensor(angle);
+                         // Convert potentiometer 0–1023 → 0–45 degrees
+                         int mappedAngle = static_cast<int>((angle / 1023.0) * 45.0);
+                         seatController.setSeatBackAngleFromSensor(mappedAngle);
                      });
 
-    // --- GPIO Button -> Dashboard logic ---
+    // --- Connect WeatherReader -> QML property ---
+    double currentWeatherTemp = 0.0;
+    QObject::connect(&weatherReader, &WeatherReader::temperatureUpdated,
+                     [&](double temp) {
+                         currentWeatherTemp = temp;
+                         engine.rootContext()->setContextProperty("weatherTemp", currentWeatherTemp);
+                     });
+
+    // Initialize QML property so it’s available from the start
+    engine.rootContext()->setContextProperty("weatherTemp", currentWeatherTemp);
+
+    // --- GPIO Button → Dashboard Logic ---
     QObject::connect(&gpioController, &GpioController::engineButtonPressed, [&]() {
         dashboardController.setEngineOn(!dashboardController.engineOn());
     });
 
-    // Acceleration: start on press, stop on release
+    // Acceleration control
     QObject::connect(&gpioController, &GpioController::accelButtonPressed, [&]() {
         speedController.startAcceleration();
     });
@@ -49,7 +62,7 @@ int main(int argc, char *argv[])
         speedController.stopAcceleration();
     });
 
-    // Braking: start on press, stop on release
+    // Braking control
     QObject::connect(&gpioController, &GpioController::brakeButtonPressed, [&]() {
         speedController.startBraking();
     });
@@ -57,7 +70,7 @@ int main(int argc, char *argv[])
         speedController.stopBraking();
     });
 
-    // Turn signals (toggle)
+    // Turn signals
     QObject::connect(&gpioController, &GpioController::leftSignalButtonPressed, [&]() {
         dashboardController.toggleLeftSignal();
     });
@@ -65,18 +78,18 @@ int main(int argc, char *argv[])
         dashboardController.toggleRightSignal();
     });
 
-    // --- Dashboard LED <-> GPIO LED sync ---
+    // --- Dashboard LEDs ↔ GPIO LEDs ---
     QObject::connect(&dashboardController, &DashboardController::leftSignalOnChanged,
                      &gpioController, &GpioController::handleLeftSignal);
     QObject::connect(&dashboardController, &DashboardController::rightSignalOnChanged,
                      &gpioController, &GpioController::handleRightSignal);
 
-    // --- Graceful cleanup on exit ---
+    // --- Cleanup on exit ---
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
         gpioController.cleanup();
     });
 
-    // --- Engine state -> subsystems ---
+    // --- Engine state ↔ Subsystems ---
     QObject::connect(&dashboardController, &DashboardController::engineOnChanged,
                      [&](bool on) {
                          speedController.setEngineRunning(on);
@@ -104,7 +117,10 @@ int main(int argc, char *argv[])
                              QCoreApplication::exit(-1);
                      }, Qt::QueuedConnection);
 
-    qDebug() << "Dashboard running with file-based seat angle input (/home/weston/data.csv).";
+    qDebug() << "🚗 Dashboard started";
+    qDebug() << "   - Monitoring seat angle & temperature from /home/weston/data.csv";
+    qDebug() << "   - GPIO buttons active for engine, acceleration, brake, and signals";
+
     engine.load(url);
 
     return app.exec();
