@@ -1,0 +1,12 @@
+{
+  "unicast": "auto",
+  "applications": [
+    { "name": "service-sample", "id": "0x1234" },
+    { "name": "client-sample",  "id": "0x1235" }
+  ],
+  "routing": "service-sample",
+  "service-discovery": { "enable": true },
+  "services": [
+    { "service": "0x1234", "instance": "0x0001", "reliable": true, "unreliable": true }
+  ]
+}
