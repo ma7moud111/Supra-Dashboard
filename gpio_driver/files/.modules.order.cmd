@@ -1,0 +1,1 @@
+cmd_/home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/modules.order := {   echo /home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/gpiomod.ko; :; } | awk '!x[$$0]++' - > /home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/modules.order

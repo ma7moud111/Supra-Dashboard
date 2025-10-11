@@ -1,0 +1,1 @@
+cmd_/home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/gpiomod.mod := { echo  /home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/gpiomod.o;  echo; } > /home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/gpiomod.mod

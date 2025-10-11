@@ -1,0 +1,1 @@
+cmd_/home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/Module.symvers := sed 's/\.ko$$/\.o/' /home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/modules.order | scripts/mod/modpost -m -a  -o /home/abdo/yocto/layers/meta-abozaid/recipes-kernel/gpio_driver/files/Module.symvers -e -i Module.symvers   -T -
