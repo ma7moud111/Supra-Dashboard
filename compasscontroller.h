@@ -3,6 +3,8 @@
 
 #include <QObject>
 #include <QTimer>
+#include <QFile>
+#include <QTextStream>
 
 class CompassController : public QObject
 {
@@ -15,7 +17,7 @@ public:
     double heading() const;
 
 public slots:
-    void updateHeading();  // simulate or read sensor
+    void updateHeading();  // read compass angle from sensors.csv
 
 signals:
     void headingChanged(double heading);
@@ -23,6 +25,8 @@ signals:
 private:
     double m_heading;
     QTimer m_timer;
+
+    QString m_filePath = "/home/weston/sensors.csv";
 };
 
 #endif // COMPASSCONTROLLER_H

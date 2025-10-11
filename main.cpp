@@ -3,13 +3,18 @@
 #include <QQmlContext>
 #include <QTimer>
 
+/*
+ * gueghgnoskdfdudkgnignd
+ */
+
 #include "speedcontroller.h"
 #include "SeatController.h"
 #include "dashboardcontroller.h"
 #include "tachometercontroller.h"
 #include "temperaturecontroller.h"
 #include "gpiocontroller.h"
-#include "fileseatreader.h"   // reads /home/weston/data.csv periodically
+#include "fileseatreader.h"
+#include "compasscontroller.h"
 
 int main(int argc, char *argv[])
 {
@@ -23,25 +28,24 @@ int main(int argc, char *argv[])
     TachometerController tachometerController;
     TemperatureController temperatureController;
     GpioController gpioController;
-    FileSeatReader seatReader;  // polls file in ctor
+    FileSeatReader seatReader;      // reads seat angle from /home/weston/data.csv
+    CompassController compassController;  // reads compass angle from /home/weston/sensors.csv
 
-    // --- Initialize GPIO subsystem (if using real GPIO path) ---
+    // --- Initialize GPIO subsystem ---
     gpioController.init();
 
     // --- Connect CSV reader -> SeatController ---
-    // Note: FileSeatReader already maps pot (0..1023) -> angle (0..45) and emits it.
     QObject::connect(&seatReader, &FileSeatReader::seatAngleReceived,
                      [&](int angle) {
-                         // angle is expected in degrees (0..45) from FileSeatReader
                          seatController.setSeatBackAngleFromSensor(angle);
                      });
 
-    // --- GPIO Button -> Dashboard logic ---
+    // --- GPIO Button → Dashboard Logic ---
     QObject::connect(&gpioController, &GpioController::engineButtonPressed, [&]() {
         dashboardController.setEngineOn(!dashboardController.engineOn());
     });
 
-    // Acceleration: start on press, stop on release
+    // Acceleration: hold to accelerate
     QObject::connect(&gpioController, &GpioController::accelButtonPressed, [&]() {
         speedController.startAcceleration();
     });
@@ -49,7 +53,7 @@ int main(int argc, char *argv[])
         speedController.stopAcceleration();
     });
 
-    // Braking: start on press, stop on release
+    // Braking: hold to brake
     QObject::connect(&gpioController, &GpioController::brakeButtonPressed, [&]() {
         speedController.startBraking();
     });
@@ -65,18 +69,18 @@ int main(int argc, char *argv[])
         dashboardController.toggleRightSignal();
     });
 
-    // --- Dashboard LED <-> GPIO LED sync ---
+    // --- Dashboard LED ↔ GPIO LED sync ---
     QObject::connect(&dashboardController, &DashboardController::leftSignalOnChanged,
                      &gpioController, &GpioController::handleLeftSignal);
     QObject::connect(&dashboardController, &DashboardController::rightSignalOnChanged,
                      &gpioController, &GpioController::handleRightSignal);
 
-    // --- Graceful cleanup on exit ---
+    // --- Graceful cleanup ---
     QObject::connect(&app, &QCoreApplication::aboutToQuit, [&]() {
         gpioController.cleanup();
     });
 
-    // --- Engine state -> subsystems ---
+    // --- Engine state connections ---
     QObject::connect(&dashboardController, &DashboardController::engineOnChanged,
                      [&](bool on) {
                          speedController.setEngineRunning(on);
@@ -95,6 +99,7 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("dashboardController", &dashboardController);
     engine.rootContext()->setContextProperty("tachometerController", &tachometerController);
     engine.rootContext()->setContextProperty("temperatureController", &temperatureController);
+    engine.rootContext()->setContextProperty("compassController", &compassController);
 
     // --- Load main QML ---
     const QUrl url(QStringLiteral("qrc:/dashboardhw/main.qml"));
@@ -104,8 +109,10 @@ int main(int argc, char *argv[])
                              QCoreApplication::exit(-1);
                      }, Qt::QueuedConnection);
 
-    qDebug() << "Dashboard running with file-based seat angle input (/home/weston/data.csv).";
-    engine.load(url);
+    qDebug() << "Dashboard running with file-based sensors:"
+             << "\n  - Seat angle: /home/weston/data.csv"
+             << "\n  - Compass: /home/weston/sensors.csv";
 
+    engine.load(url);
     return app.exec();
 }
