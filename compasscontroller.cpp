@@ -36,7 +36,7 @@ void CompassController::updateHeading()
         return;
     }
 
-    // Expected format: compass,angle,time,hour:min:sec
+    //format: compass,angle,time,hour:min:sec
     QStringList tokens = line.split(',');
     if (tokens.size() < 4) {
         qWarning() << "[CompassController] Invalid line format:" << line;
