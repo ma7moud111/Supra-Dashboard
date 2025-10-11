@@ -1,0 +1,11 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -655,8 +655,6 @@
+ add_subdirectory( examples EXCLUDE_FROM_ALL )
+ 
+ ##############################################################################
+-# add test directory
+-enable_testing()
+ 
+ add_subdirectory( test EXCLUDE_FROM_ALL )
+ 

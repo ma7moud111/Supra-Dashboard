@@ -1,0 +1,8 @@
+{
+    "commonapi.examples.E01HelloWorld" : {
+        "service_id": 4660,
+        "instances" : {
+            "commonapi.examples.HelloWorld": 22136
+        }
+    }
+}
