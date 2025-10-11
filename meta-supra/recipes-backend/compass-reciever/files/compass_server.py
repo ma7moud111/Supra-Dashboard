@@ -1,41 +1,58 @@
 #!/usr/bin/env python3
-import os, sys, time, json, urllib.parse
+import os, sys, time, json, urllib.parse, threading, queue
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 OUTPUT_FILE   = "/home/weston/sensors.csv"
 BIND_HOST     = "0.0.0.0"
 BIND_PORT     = 8000
 
-THROTTLE_SEC   = 0.0     # force every POST to write during testing
-ONLY_ON_CHANGE = False   # force write regardless of value/time during testing
+THROTTLE_SEC   = 0.0
+ONLY_ON_CHANGE = False
 MAX_BODY_BYTES = 65536
+REQUEST_TIMEOUT = 10  # seconds
 
 last_write_ts = 0.0
 last_row      = ""
 last_time     = ""
 last_value    = None
+write_queue   = queue.Queue(maxsize=10)  # async write queue
 
-def ensure_output_ready():
-    d = os.path.dirname(OUTPUT_FILE) or "."
-    os.makedirs(d, exist_ok=True)
-
-def write_single_line(path: str, text: str):
-    with open(path, "w") as f:
-        f.write(text + "\n")
+def write_worker():
+    """Background thread that handles all file writes"""
+    while True:
+        try:
+            row = write_queue.get(timeout=1)
+            if row is None:  # sentinel value to exit
+                break
+            d = os.path.dirname(OUTPUT_FILE) or "."
+            os.makedirs(d, exist_ok=True)
+            with open(OUTPUT_FILE, "w") as f:
+                f.write(row + "\n")
+            print(f"[WRITE] {row}", file=sys.stderr)
+        except queue.Empty:
+            continue
+        except Exception as e:
+            print(f"[ERROR] Write failed: {e}", file=sys.stderr)
 
 class Handler(BaseHTTPRequestHandler):
-    def log_message(self, fmt, *args): return
+    timeout = REQUEST_TIMEOUT
+
+    def log_message(self, fmt, *args):
+        return
 
     def _send(self, code=200, body=b"", ctype="text/plain"):
         self.send_response(code)
         self.send_header("Content-Type", ctype)
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
-        if body: self.wfile.write(body)
+        if body:
+            self.wfile.write(body)
 
     def do_GET(self):
-        if self.path == "/ping":   return self._send(200, b"pong\n")
-        if self.path == "/latest": return self._send(200, (last_row + "\n").encode())
+        if self.path == "/ping":
+            return self._send(200, b"pong\n")
+        if self.path == "/latest":
+            return self._send(200, (last_row + "\n").encode())
         return self._send(404, b"not found\n")
 
     def do_POST(self):
@@ -63,7 +80,8 @@ class Handler(BaseHTTPRequestHandler):
                 payload_text = None
                 for k in ("data", "payload", "json"):
                     if k in form and form[k]:
-                        payload_text = form[k][0]; break
+                        payload_text = form[k][0]
+                        break
                 if payload_text is None:
                     return self._send(400, b"no JSON field found\n")
                 data = json.loads(payload_text)
@@ -97,23 +115,26 @@ class Handler(BaseHTTPRequestHandler):
 
         if should_write:
             try:
-                ensure_output_ready()
-                write_single_line(OUTPUT_FILE, row)   # <-- truncates + writes one line
+                write_queue.put_nowait(row)  # non-blocking queue put
                 last_write_ts = t
-                last_value    = compass_val
-                last_time     = now_str
-                print(f"[WRITE] {row}", file=sys.stderr)
-            except Exception as e:
-                return self._send(500, f"write failed: {e}\n".encode())
+                last_value = compass_val
+                last_time = now_str
+            except queue.Full:
+                print(f"[WARN] Write queue full, dropping update", file=sys.stderr)
 
         last_row = row
         return self._send(200, b"OK\n")
 
 if __name__ == "__main__":
-    ensure_output_ready()
+    # Start background write worker
+    worker_thread = threading.Thread(target=write_worker, daemon=True)
+    worker_thread.start()
+
     srv = HTTPServer((BIND_HOST, BIND_PORT), Handler)
     print(f"[INFO] listening on {BIND_HOST}:{BIND_PORT}, writing to {OUTPUT_FILE}", file=sys.stderr)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
+        write_queue.put(None)  # signal worker to exit
+        worker_thread.join(timeout=2)
         srv.server_close()
