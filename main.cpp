@@ -3,10 +3,6 @@
 #include <QQmlContext>
 #include <QTimer>
 
-/*
- * gueghgnoskdfdudkgnignd
- */
-
 #include "speedcontroller.h"
 #include "SeatController.h"
 #include "dashboardcontroller.h"
