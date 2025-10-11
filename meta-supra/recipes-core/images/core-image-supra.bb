@@ -7,15 +7,33 @@ IMAGE_FEATURES:append = " splash package-management ssh-server-dropbear hwcodecs
 # Remove uneeded 
 IMAGE_FEATURES:remove = "ssh-server-dropbear"
 # Image Install apps
-IMAGE_INSTALL:append = " python3 bash tcpdump openssh psplash wifi-config rdp-certs tictactoe dashboard-service user-supra gpio-driver servo button "
+IMAGE_INSTALL:append = " python3 \
+                            bash \
+                            tcpdump \
+                            openssh \
+                            psplash \
+                            wifi-config \
+                            rdp-certs \
+                            dashboard-service \
+                            user-supra \
+                            gpio-driver \
+                            servo \
+                            button \
+                            tictactoe \
+                            packagegroup-supra-commonapi \
+                            vsomeip \
+                            capicxx-core-runtime \
+                            capicxx-someip-runtime \
+                            compass-receiver \
+                            "
 #IMAGE_INSTALL:remove = " weston-xwayland"
 #CORE_IMAGE_EXTRA_INSTALL:append = " plymouth"
 
 EXTRA_IMAGE_FEATURES ?= "debug-tweaks ssh-server-openssh"
 
 # Enable UART for tty
-ENABLE_UART = "1"
-SERIAL_CONSOLES = "115200;ttyS0"
+# ENABLE_UART = "1"
+# SERIAL_CONSOLES = "115200;ttyS0"
 
 # Configure gpio17 as pull-up
 RPI_EXTRA_CONFIG:append = " gpio=5=ip,pu"
