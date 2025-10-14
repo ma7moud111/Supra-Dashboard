@@ -8,7 +8,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Qt-6.7-brightgreen?logo=qt&logoColor=white">
   <img src="https://img.shields.io/badge/Yocto-Kirkstone_LTS-blue?logo=yocto-project&logoColor=white">
-  <img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%203B%20(64-bit)-red">
+  <img src="https://img.shields.io/badge/Platform-RaspberryPI3-red">
   <img src="https://img.shields.io/badge/UI-QML%20Frontend-lightgrey">
   <img src="https://img.shields.io/badge/Status-Production%20Ready-green">
 </p>
