@@ -1,8 +1,3 @@
-Perfect. Below is a **fully GitHub-optimized** version of your README — clean, modern, and visually appealing.
-It includes badges, collapsible sections, and a project banner section — ready to publish directly on GitHub.
-
----
-
 # 🚗 Supra Dashboard — Main Branch
 
 > 🧠 A **Raspberry Pi 3B (64-bit)** car dashboard built with **Qt 6 / QML** and the **Yocto Project**.
