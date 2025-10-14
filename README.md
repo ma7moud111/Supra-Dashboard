@@ -1,113 +1,106 @@
-<<<<<<< HEAD
-## 🚀 **Overview**
+# 🚗 Supra Dashboard — `production` Branch
 
-Our project is a **Car Dashboard (Instrument Cluster)** built using **C++ + Qt + QML**.
-It simulates the car’s key dashboard functions such as:
-
-* **Speedometer** (vehicle speed)
-* **Tachometer** (engine RPM)
-* **Temperature Gauge**
-* **Seat Position Controller**
-* **GPIO Controller** (to interact with physical Raspberry Pi pins or LEDs)
-* **Dashboard Orchestrator** (main controller connecting all subsystems)
-* **Data Reader** (`FileSeatReader`) that reads live sensor values from a file or real input
-
-This can be run on a PC for simulation or on an **embedded target (like Raspberry Pi)** for real car hardware integration.
+> 🎯 **Final integrated build** of the Supra Dashboard — combining the **Qt/QML application**, **backend controllers**, and **Yocto-based embedded system** for **Raspberry Pi 3B (64-bit)**.
+> This is the **release branch** that merges everything from `qt-dev`, `backend-dev`, and `metaz-dev` into a complete, flash-ready system image.
 
 ---
 
-## 🧩 **Architecture Overview**
+<p align="center">
+  <img src="https://img.shields.io/badge/Qt-6.7-brightgreen?logo=qt&logoColor=white">
+  <img src="https://img.shields.io/badge/Yocto-Kirkstone_LTS-blue?logo=yocto-project&logoColor=white">
+  <img src="https://img.shields.io/badge/Platform-Raspberry%20Pi%203B%20(64-bit)-red">
+  <img src="https://img.shields.io/badge/UI-QML%20Frontend-lightgrey">
+  <img src="https://img.shields.io/badge/Status-Production%20Ready-green">
+</p>
 
-Here’s the system structure in layers:
+---
+
+## 🚀 Overview
+
+The Supra Dashboard is a **car instrument cluster simulator** and real embedded dashboard featuring:
+
+* **Speedometer** — Vehicle speed display
+* **Tachometer** — Engine RPM indicator
+* **Temperature Gauge** — Engine/cabin temperature
+* **Seat Position Controller** — Reads from CSV or sensor input
+* **GPIO Controller** — Interacts with Raspberry Pi pins or LEDs
+* **Dashboard Orchestrator** — Central C++ controller
+* **FileSeatReader** — Streams live sensor data from `/home/weston/data.csv`
+
+It can run both on **desktop (simulation)** and **Raspberry Pi (real hardware)** via Yocto integration.
+
+---
+
+## 🧩 System Architecture
 
 ```
 +-----------------------------------------------------------+
-|                    QML Frontend (UI)                      |
+|                     QML Frontend (UI)                     |
 |-----------------------------------------------------------|
-|   SpeedometerView.qml     TachometerView.qml     etc...   |
-|   - Animations, gauges, needles, digital displays          |
-|   - Communicates with C++ via Q_PROPERTY / signals         |
+| SpeedometerView.qml   TachometerView.qml   TempView.qml   |
+| - Gauges, animations, bindings via Q_PROPERTY             |
 +-----------------------------------------------------------+
-|                    C++ Backend (Controllers)              |
+|                    C++ Backend (Logic)                    |
 |-----------------------------------------------------------|
-|  SpeedController        TachometerController              |
-|  TemperatureController  SeatController                    |
-|  GpioController         DashboardController               |
-|  FileSeatReader (for input data)                           |
+| SpeedController     TachometerController   SeatController |
+| TemperatureController  GpioController  DashboardController |
+| FileSeatReader (CSV or sensor data)                       |
 +-----------------------------------------------------------+
-|                    Data Sources / Hardware                |
+|                   Data Sources / Hardware                 |
 |-----------------------------------------------------------|
-|  - CSV file (/home/weston/data.csv)                       |
-|  - Physical GPIO (on RPi)                                 |
-|  - Simulated timers (QTimer)                              |
+|  - /home/weston/data.csv                                  |
+|  - GPIO (LEDs, switches)                                  |
+|  - UART / QTimer simulations                              |
 +-----------------------------------------------------------+
 ```
 
-Each controller handles **one domain**, and the **DashboardController** ties them together.
+Each controller handles one domain.
+`DashboardController` connects all sub-modules into one orchestrated system.
 
 ---
 
-## ⚙️ **Main Application Flow**
+## ⚙️ Application Flow (main.cpp)
 
-### **`main.cpp`**
+```cpp
+QGuiApplication app(argc, argv);
+QQmlApplicationEngine engine;
 
-Here’s what happens step by step:
+// Controllers
+SpeedController speed;
+TachometerController tachometer;
+TemperatureController temp;
+SeatController seat;
+GpioController gpio;
+DashboardController dashboard;
+FileSeatReader fileReader;
 
-1. **Initialize Qt Application**
+// Expose to QML
+engine.rootContext()->setContextProperty("speedController", &speed);
+engine.rootContext()->setContextProperty("tachometerController", &tachometer);
+engine.rootContext()->setContextProperty("temperatureController", &temp);
+engine.rootContext()->setContextProperty("seatController", &seat);
+engine.rootContext()->setContextProperty("gpioController", &gpio);
 
-   ```cpp
-   QGuiApplication app(argc, argv);
-   QQmlApplicationEngine engine;
-   ```
-
-2. **Create Controllers**
-
-   ```cpp
-   SpeedController speedController;
-   SeatController seatController;
-   DashboardController dashboardController;
-   TachometerController tachometerController;
-   TemperatureController temperatureController;
-   GpioController gpioController;
-   FileSeatReader fileSeatReader;
-   ```
-
-3. **Expose to QML**
-
-   ```cpp
-   engine.rootContext()->setContextProperty("speedController", &speedController);
-   engine.rootContext()->setContextProperty("tachometerController", &tachometerController);
-   engine.rootContext()->setContextProperty("temperatureController", &temperatureController);
-   engine.rootContext()->setContextProperty("seatController", &seatController);
-   engine.rootContext()->setContextProperty("gpioController", &gpioController);
-   ```
-
-4. **Load the QML UI**
-
-   ```cpp
-   engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
-   ```
-
-5. **Start the Application**
-
-   ```cpp
-   return app.exec();
-   ```
-
-So the backend C++ objects are **registered in the QML context**, and the **UI can directly bind** to them via properties and signals.
+// Load QML
+engine.load(QUrl(QStringLiteral("qrc:/main.qml")));
+return app.exec();
+```
 
 ---
 
-## ⚡ **Main Controllers Explained**
+## 🔧 Core Controllers
 
-### 🏎️ **SpeedController**
+| Controller                | Purpose                                       |
+| ------------------------- | --------------------------------------------- |
+| **SpeedController**       | Simulates vehicle speed using QTimer          |
+| **TachometerController**  | Manages RPM value and needle animation        |
+| **TemperatureController** | Simulates or reads engine temperature         |
+| **SeatController**        | Controls and animates seat position           |
+| **GpioController**        | Writes/reads physical Raspberry Pi GPIOs      |
+| **DashboardController**   | Central logic hub; updates all subsystems     |
+| **FileSeatReader**        | Reads `/home/weston/data.csv` for live inputs |
 
-* Controls the **car’s current speed**.
-* Uses a **QTimer** to simulate speed increase/decrease.
-* Exposes a **Q_PROPERTY(int speed READ speed NOTIFY speedChanged)**.
-* Can be connected to QML’s speedometer needle rotation.
-
-**Example logic:**
+**Example (SpeedController):**
 
 ```cpp
 void SpeedController::updateSpeed() {
@@ -116,44 +109,7 @@ void SpeedController::updateSpeed() {
 }
 ```
 
-### 🔧 **TachometerController**
-
-* Handles **engine RPM** (revolutions per minute).
-* Similar timer-based simulation.
-* Q_PROPERTY exposes `rpm` value to QML.
-* In QML, it animates the **needle** of the tachometer.
-
-```cpp
-void TachometerController::updateRPM() {
-    m_rpm = (m_rpm + 100) % 8000;
-    emit rpmChanged(m_rpm);
-}
-```
-
-### 🌡️ **TemperatureController**
-
-* Monitors engine or cabin temperature.
-* Gradually increases with time (or input from a file).
-* Emits `temperatureChanged()` signal.
-* Connected to a **QML temperature gauge**.
-
-### 💺 **SeatController**
-
-* Controls **seat position** (e.g., forward/backward, up/down).
-* Provides **setSeatPosition(x, y)** methods and `positionChanged` signals.
-* Could receive data from **FileSeatReader** or **QML buttons**.
-* Used for UI sliders or seat adjustment animations.
-
-### ⚙️ **GpioController**
-
-* Manages **real GPIO pins** (on Raspberry Pi or similar).
-* Used for controlling external devices like **LEDs** or **relays**.
-* Example actions:
-
-  * Turn LED on/off
-  * Read input from switches
-
-It uses C++ file I/O on `/sys/class/gpio` (pure C++, not QFile) for performance.
+**Example (GPIO Write):**
 
 ```cpp
 void GpioController::writeGpio(int pin, int value) {
@@ -162,97 +118,9 @@ void GpioController::writeGpio(int pin, int value) {
 }
 ```
 
-### 🧠 **DashboardController**
-
-* Central orchestrator: coordinates between other controllers.
-* Example: when speed increases, RPM and temperature also rise.
-* Could also manage “modes” (e.g., eco/sport).
-
-```cpp
-void DashboardController::updateAll() {
-    speedController->updateSpeed();
-    tachometerController->updateRPM();
-    temperatureController->updateTemperature();
-}
-```
-
-### 📄 **FileSeatReader**
-
-* Reads `/home/weston/data.csv` periodically.
-* Parses sensor/seat data.
-* Emits signals to update the SeatController.
-* Uses **QTimer + std::ifstream**.
-
-Example:
-
-```
-timestamp,seatX,seatY
-0,10,15
-1,12,18
-...
-```
-
-```cpp
-void FileSeatReader::readData() {
-    std::ifstream file("/home/weston/data.csv");
-    // Parse last line and emit seatDataRead(x, y)
-}
-=======
-# Supra Dashboard — metaz-dev Branch
-
-This branch contains the main Yocto layers that define the base system distribution, custom image recipe, and helper utilities for the Supra Dashboard project. It serves as the foundation for building a lightweight, headless-capable embedded Linux system for Raspberry Pi 3B (64-bit).
-
-## Branch Overview
-
-The metaz-dev branch is organized into two primary Yocto meta-layers:
-
-- **meta-supra** — the primary production layer containing the distro definition, image recipe, and all support recipes
-- **meta-supra-commonapi** — a future-focused layer reserved for SOME/IP integration (currently disabled)
-
-Together, these layers define how the Supra system is built, what components it includes, and how it's configured for the target hardware.
-
 ---
 
-## Repository Structure
-
-```
-metaz-dev/
-├── meta-supra/
-│   ├── conf/
-│   │   ├── layer.conf                    # Yocto layer metadata (priority, compat)
-│   │   ├── machine/                      # Machine-specific overrides (optional)
-│   │   └── distro/
-│   │       └── supra.conf                # Distribution definition
-│   ├── recipes-core/
-│   │   └── images/
-│   │       └── core-image-supra.bb       # Main image recipe
-│   ├── recipes-extended/
-│   │   ├── openssh/                      # SSH server customization
-│   │   ├── wifi-config/                  # Wi-Fi configuration helpers
-│   │   └── rdp-certs/                    # RDP certificate setup
-│   ├── recipes-devtools/
-│   │   └── tools/                        # Development and diagnostic tools
-│   └── recipes-bsp/
-│       └── rpi-config/                   # Raspberry Pi specific tweaks
-│
-└── meta-supra-commonapi/
-    ├── conf/
-    │   └── layer.conf
-    ├── recipes-core/
-    │   └── commonapi/                    # Future: CommonAPI runtimes
-    └── recipes-extended/
-        └── someip/                       # Future: SOME/IP stack
->>>>>>> fb697fd (Add README file)
-```
-
----
-
-<<<<<<< HEAD
-## 🎨 **QML Layer**
-
-The QML layer defines **the UI visuals and animations**, bound to the C++ backend.
-
-### Example — Tachometer UI
+## 🎨 QML UI Example
 
 ```qml
 Rectangle {
@@ -270,528 +138,127 @@ Rectangle {
         text: tachometerController.rpm + " RPM"
     }
 }
-=======
-## Distro Definition: supra
-
-The distro is defined in `meta-supra/conf/distro/supra.conf` and establishes the system baseline.
-
-### Key Distro Settings
-
-**Identity & Versioning:**
-- `DISTRO = "supra"` — official distribution name
-- `DISTRO_VERSION = "1.0.0"` — semantic versioning
-- `DISTRO_CODENAME = "kirkstone"` — aligned with Yocto Kirkstone LTS release
-
-**Core Features:**
 ```
-DISTRO_FEATURES += "systemd wayland pam wifi"
-```
-- **systemd** — modern init system with service management
-- **wayland** — display server protocol for GPU-accelerated graphics
-- **pam** — pluggable authentication modules for flexible security
-- **wifi** — wireless networking support (drivers + connectivity tools)
 
-**Default Behaviors:**
-- Init manager → systemd (replaces SysVinit)
-- Security → PAM-based authentication
-- Graphics → Wayland instead of X11 (lighter on embedded resources)
-- Networking → Wi-Fi capable with ConnMan or NetworkManager
-
-**Build Defaults:**
-- Package format optimized for RPi (ARM64)
-- Security hardening enabled where appropriate
-- Debug symbols removed by default (release builds only)
+> Bound via `Q_PROPERTY` to the backend — fully reactive gauges and animations.
 
 ---
 
-## Image Recipe: core-image-supra
+## 🔄 Data Flow Example
 
-The main image is defined in `meta-supra/recipes-core/images/core-image-supra.bb`.
-
-### Purpose
-
-This recipe assembles the final system image that boots on the Raspberry Pi 3B in 64-bit mode. It combines the distro (supra), base packages, services, and hardware support into a single .wic disk image.
-
-### Key Image Features & Settings
-
-**Display & Boot:**
-```
-IMAGE_FEATURES += "weston splash"
-```
-- **weston** — Wayland compositor included, providing minimal GUI capability
-- **splash** — boot splash screen for visual feedback during startup
-
-**Networking & Remote Access:**
-```
-IMAGE_INSTALL += "openssh openssh-sftp-server"
-```
-- Replaces Dropbear (default SSH) with OpenSSH for broader compatibility
-- Includes SFTP for secure file transfer
-- Enabled and started by default via systemd
-
-**Serial & Hardware Access:**
-```
-ENABLE_UART = "1"
-```
-- Enables UART on GPIO pins for serial console access
-- Useful for debugging and headless operation
-- Configured at firmware level (Pi bootloader respects this)
-
-**Development & Diagnostics:**
-```
-IMAGE_INSTALL += "python3 bash tcpdump vim"
-```
-- **python3** — scripting and future dashboard backend support
-- **bash** — modern shell (instead of ash)
-- **tcpdump** — network packet analysis
-- **vim** — advanced text editor
-
-**Storage & Output:**
-```
-IMAGE_FSTYPES = "wic.gz wic.bmap"
-```
-- **wic** — Wic Image Creator format (partition table included)
-- **gz** — compressed for faster downloads and flashing
-- **bmap** — block map file for efficient, resumable flashing via bmaptool
-
-### Helper Recipes Included
-
-**Wi-Fi Configuration** (`recipes-extended/wifi-config/`):
-- Provides pre-configured ConnMan or NetworkManager profiles
-- Allows first-boot Wi-Fi connection without manual setup
-- Stores SSID/passphrase safely (can be encrypted at build time)
-
-**RDP Certificate Setup** (`recipes-extended/rdp-certs/`):
-- Pre-generates certificates for Weston RDP backend
-- Enables remote desktop access over network
-- Useful for headless dashboards accessed from workstations
-
-**OpenSSH Customization** (`recipes-extended/openssh/`):
-- Tailors SSH daemon settings (key generation, port, etc.)
-- Enables password and public-key authentication
-- Integrates with systemd for clean service management
-
-**Raspberry Pi BSP Tweaks** (`recipes-bsp/rpi-config/`):
-- Applies Pi-specific u-boot patches
-- Configures GPIO, SPI, I2C if needed
-- Adjusts frequency scaling and thermal management
+1. `QTimer` in `SpeedController` ticks → emits `speedChanged()`
+2. QML gauge updates needle position
+3. `DashboardController` syncs RPM and temperature
+4. `FileSeatReader` updates seat data → `SeatController` updates UI
+5. `GpioController` toggles LED based on state
 
 ---
 
-## Layer Configuration: layer.conf
+## 🧠 Key Qt Concepts
 
-The `meta-supra/conf/layer.conf` file registers this layer with the Yocto build system.
-
-### What It Does
-
-```
-BBPATH .= ":${LAYERDIR}"
-BBFILES += "${LAYERDIR}/recipes-*/*/*.bb ${LAYERDIR}/recipes-*/*/*.bbappend"
-BBFILE_COLLECTIONS += "meta-supra"
-BBFILE_PATTERN_meta-supra = "^${LAYERDIR}/"
-LAYERVERSION_meta-supra = "1"
-LAYERSERIES_COMPAT_kirkstone = "1"
-```
-
-- **BBPATH** — tells bitbake where recipe files are located
-- **BBFILES** — glob pattern for .bb and .bbappend files
-- **BBFILE_COLLECTIONS** — layer identifier
-- **LAYERVERSION** — layer version for dependency tracking
-- **LAYERSERIES_COMPAT** — compatibility with Kirkstone series (prevents bitbake warnings)
+| Concept           | Use                          |
+| :---------------- | :--------------------------- |
+| `Q_PROPERTY`      | Bind C++ data to QML UI      |
+| `signals/slots`   | Real-time updates            |
+| `QQmlContext`     | Expose controllers to QML    |
+| `QTimer`          | Simulation tick events       |
+| `std::ifstream`   | Efficient CSV parsing        |
+| `QGuiApplication` | Lightweight Qt 6 GUI runtime |
 
 ---
 
-## How to Use This Branch
+## 💡 Enhancements Roadmap
 
-### Prerequisites
+* Add **Fuel & Battery gauges**
+* Real sensor input via **CAN Bus** or UART
+* Historical graphing in QML
+* **Warning lights** over GPIO
+* **Unit settings** (km/h ↔ mph) in QML menu
 
-You need a standard Yocto build environment:
-- **poky** (Yocto reference distribution)
-- **meta-raspberrypi** (Raspberry Pi BSP layer)
-- Any additional OE layers (openembedded-core, meta-openembedded, etc.)
+---
 
-### Setup Steps
+## 🧱 Yocto Integration
 
-**1. Clone your Yocto workspace and add this branch:**
+This final branch embeds the Qt app and services into the Yocto image.
+Uses recipes from `meta-supra` (`metaz-dev`) and systemd units for auto-start.
+
+**Example Service**
 
 ```bash
-cd ~/work/yocto
-git clone -b metaz-dev https://github.com/ma7moud111/Supra-Dashboard.git supra-layers
+[Unit]
+Description=Supra Dashboard UI
+After=weston.service
+
+[Service]
+ExecStart=/usr/bin/dashboard
+Restart=always
+User=weston
+
+[Install]
+WantedBy=multi-user.target
 ```
 
-**2. Update your build's `conf/bblayers.conf`:**
+Built and packaged inside `core-image-supra.bb` in `meta-supra`.
 
-```python
-BBLAYERS ?= " \
-  /path/to/poky/meta \
-  /path/to/poky/meta-poky \
-  /path/to/meta-raspberrypi \
-  /path/to/supra-layers/meta-supra \
-"
+---
 
-# Uncomment when SOME/IP integration is ready:
-# BBLAYERS += "/path/to/supra-layers/meta-supra-commonapi"
-```
+## 🖼️ System Build Flow
 
-**3. Configure your build in `conf/local.conf`:**
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/00000000928c62469534de4ee1123dc0" width="80%" alt="Build to Flash to Boot Diagram">
+</p>
 
-```python
-MACHINE = "raspberrypi3-64"
-DISTRO  = "supra"
+---
 
-# Optional: adjust build parallelism for your hardware
-BB_NUMBER_THREADS = "4"
-PARALLEL_MAKE = "-j 4"
-```
-
-**4. Initialize the build environment and build:**
+## ⚡ Build → Flash → Boot
 
 ```bash
+# Build Yocto image
 source poky/oe-init-build-env build-supra
 bitbake core-image-supra
-```
 
-**5. Find your output image:**
-
-```
-tmp/deploy/images/raspberrypi3-64/core-image-supra-raspberrypi3-64.wic.gz
-tmp/deploy/images/raspberrypi3-64/core-image-supra-raspberrypi3-64.wic.bmap
-```
-
-### Flashing to SD Card
-
-**Using bmaptool (recommended):**
-
-```bash
+# Flash to SD
 sudo bmaptool copy \
-  tmp/deploy/images/raspberrypi3-64/core-image-supra-raspberrypi3-64.wic.gz \
-  /dev/sdX
+  tmp/deploy/images/raspberrypi3-64/core-image-supra-raspberrypi3-64.wic.gz /dev/sdX
 ```
 
-The .bmap file ensures efficient, resumable writes and validates checksums automatically.
-
-**Using dd (slower, less safe):**
-
-```bash
-gunzip -c core-image-supra-raspberrypi3-64.wic.gz | \
-  sudo dd of=/dev/sdX bs=4M conv=fsync
->>>>>>> fb697fd (Add README file)
-```
+Boot the Pi → systemd launches Weston + Dashboard automatically.
 
 ---
 
-<<<<<<< HEAD
-## 🔄 **Data Flow Example**
+## 🧭 Access Summary
 
-Example sequence when running:
-
-1. QTimer in `SpeedController` ticks every 500 ms.
-2. `m_speed` increases → emits `speedChanged()`.
-3. QML gauge bound to `speedController.speed` updates needle rotation.
-4. DashboardController might adjust `TachometerController` and `TemperatureController` based on speed.
-5. `GpioController` might blink an LED at high speed.
-6. `FileSeatReader` updates seat data → signals `SeatController` → QML animates seat position.
+| Interface          | Command                              |
+| :----------------- | :----------------------------------- |
+| **Serial Console** | GPIO 14/15 @ 115200 baud             |
+| **SSH**            | `ssh root@<ip>`                      |
+| **UI Display**     | Weston (HDMI output)                 |
+| **Logs**           | `journalctl -u dashboard.service -f` |
 
 ---
 
-## 🧱 **Typical Class Relationships**
+## 📦 Full Project Package
 
-```
-DashboardController
- ├── SpeedController
- ├── TachometerController
- ├── TemperatureController
- ├── SeatController
- ├── GpioController
- └── FileSeatReader
-```
+🎁 **Download the full working project here:**
+👉 [Supra Dashboard — Production Build (Google Drive)](https://drive.google.com/file/d/1aEI9zduPqLGgKbfMTE7OlPWcKegxV7-0/view?usp=drive_link)
 
-Each subcontroller is modular, so you can replace or simulate them independently.
+Includes:
+
+* Source Code (C++ + QML)
+* Yocto Layers (`meta-supra`, `meta-supra-commonapi`)
+* Prebuilt Images + Services
+* Deployment Guide
 
 ---
 
-## 🧠 **Key Qt Concepts Used**
+## 📚 References
 
-| Concept                             | Role in the Project                        |
-| ----------------------------------- | ------------------------------------------ |
-| **Q_PROPERTY**                      | Exposes C++ variables to QML bindings      |
-| **signals/slots**                   | Event communication between backend and UI |
-| **QTimer**                          | Periodic updates for simulation            |
-| **QQmlApplicationEngine**           | Loads and runs the QML UI                  |
-| **QQmlContext::setContextProperty** | Makes C++ controllers accessible to QML    |
-| **std::ifstream / std::ofstream**   | Efficient file access for GPIO and CSV     |
-| **QGuiApplication**                 | Main Qt app for QML GUIs                   |
+* [Qt 6 Documentation](https://doc.qt.io/qt-6/)
+* [Yocto Project Docs](https://docs.yoctoproject.org/)
+* [Weston Compositor](https://wayland.freedesktop.org/weston/)
+* [Raspberry Pi Yocto Layer](https://github.com/agherzan/meta-raspberrypi)
+* [systemd Manual](https://www.freedesktop.org/wiki/Software/systemd/)
 
 ---
 
-## 💡 **Possible Enhancements**
-
-* Add **fuel gauge** and **battery voltage** meters
-* Integrate **real sensor data** over CAN bus or serial
-* Store historical speed data and draw graphs
-* Implement **warning lights** using GPIO
-* Add **settings menu** in QML to toggle units (km/h, mph)
-
----
-=======
-## First Boot & Operation
-
-### Physical Connection
-
-1. Insert the flashed SD card into the Raspberry Pi 3B
-2. Connect power (5V micro-USB)
-3. Optionally connect:
-   - HDMI for display + USB keyboard
-   - Ethernet or use pre-configured Wi-Fi
-   - Serial console via UART (GPIO 14/15) at 115200 baud
-
-### Boot Process
-
-The Pi will:
-1. Load u-boot from the SD card
-2. Start the Linux kernel (ARM64)
-3. Init systemd
-4. Launch Weston (if HDMI connected) or drop to serial/SSH login
-
-### Default Access
-
-- **Serial console** — root login (no password set by default; configure in recipes)
-- **SSH** — `ssh root@<ip-address>` using OpenSSH
-- **Display** — Weston provides a minimal compositor (right-click for menu)
-
-### Systemd Service Management
-
-Once booted, manage services like this:
-
-```bash
-# List services
-systemctl list-units --type=service
-
-# Enable a service to start on boot
-systemctl enable myservice
-
-# Start/stop/restart a service
-systemctl start myservice
-systemctl stop myservice
-systemctl restart myservice
-
-# View live logs
-journalctl -u myservice -f
-
-# View all system logs
-journalctl -b
-```
-
----
-
-## Recipes Breakdown
-
-### recipes-core/images/core-image-supra.bb
-
-**Inherits:** `core-image` (provides base image template)  
-**Purpose:** Assembles the final disk image
-
-**Key Variables:**
-- `IMAGE_INSTALL` — list of packages to include
-- `IMAGE_FEATURES` — high-level toggles (weston, splash, etc.)
-- `IMAGE_FSTYPES` — output file formats
-- `ENABLE_UART` — hardware config
-
-**Typical Customizations:**
-- Add packages: append to `IMAGE_INSTALL`
-- Change features: modify `IMAGE_FEATURES`
-- Adjust filesystem: update `IMAGE_FSTYPES`
-- Add systemd services: include them in `IMAGE_INSTALL` and enable via `.service` files
-
-### recipes-extended/openssh/
-
-**Purpose:** Customize SSH daemon behavior  
-**Includes:**
-- Server key generation on first boot
-- Port configuration (default 22)
-- Authentication method selection
-- systemd integration for clean startup/shutdown
-
-### recipes-extended/wifi-config/
-
-**Purpose:** Deliver pre-configured wireless profiles  
-**Includes:**
-- ConnMan service files for automatic connection
-- NetworkManager profiles (optional)
-- Passphrase storage (encrypted or plaintext, configurable)
-- Fallback to manual wpa_supplicant if needed
-
-### recipes-extended/rdp-certs/
-
-**Purpose:** Enable remote desktop via Weston RDP backend  
-**Includes:**
-- Self-signed certificate generation
-- Systemd service to start RDP listener
-- Configuration for remote access (port, security)
-- Useful for headless Pi with Weston running off-screen
-
-### recipes-bsp/rpi-config/
-
-**Purpose:** Pi-specific kernel and firmware tweaks  
-**Includes:**
-- Device tree customizations
-- GPIO setup (if needed)
-- SPI/I2C configuration
-- CPU frequency scaling and thermal management
-- Bootloader parameters
-
----
-
-## Future: meta-supra-commonapi (SOME/IP Integration)
-
-This layer is reserved for future work on real-time middleware. It is currently disabled.
-
-### What Will Go There
-
-**CommonAPI Runtime** — DBUS middleware for service-oriented architecture
-
-**vSomeIP Stack** — SOME/IP protocol implementation (automotive standard)
-
-**IDL & Codegen** — Franca interface definition language and code generation tools
-
-**Example Services** — HelloWorld service/client for testing communication
-
-**Systemd Units** — Service files for automatic discovery and lifecycle management
-
-### When Ready
-
-1. Add the layer to `bblayers.conf`
-2. Include dependencies in the image (boost, etc.)
-3. Add service recipes to `recipes-extended/`
-4. Build and test
-
-For now, the folder structure is in place; no recipes are active.
-
----
-
-## Troubleshooting
-
-### No GUI / Weston Won't Start
-
-**Check:**
-- `DISTRO_FEATURES` includes `wayland` in supra.conf
-- `IMAGE_FEATURES` includes `weston` in core-image-supra.bb
-- HDMI is connected before boot
-- GPU drivers are present (meta-raspberrypi should provide them)
-
-**Debug:**
-```bash
-ps aux | grep weston
-journalctl -u weston -n 50
-# Check GPU memory allocation (check config.txt on FAT partition)
-cat /proc/device-tree/model
-```
-
-### SSH Not Accessible
-
-**Check:**
-- `openssh` is in `IMAGE_INSTALL`
-- Service is running: `systemctl status ssh`
-- Port 22 is not blocked by iptables
-- Network is up: `ip addr` and `ip route`
-
-**Debug:**
-```bash
-systemctl status ssh
-journalctl -u ssh -n 50
-netstat -tlnp | grep :22
-```
-
-### Serial Console Not Working
-
-**Check:**
-- `ENABLE_UART = "1"` is set in core-image-supra.bb
-- USB-to-UART adapter wired correctly (TX→GPIO14, RX→GPIO15, GND→GND)
-- Serial terminal config: 115200 baud, 8N1
-
-**Debug:**
-```bash
-dmesg | grep tty
-cat /proc/device-tree/aliases/uart0
-```
-
-### Wi-Fi Connection Issues
-
-**Check:**
-- Wi-Fi config files are present: `/etc/connman/` or `/etc/NetworkManager/`
-- SSID and passphrase are correct
-- Wireless driver is loaded: `rfkill list`
-
-**Debug:**
-```bash
-connmanctl commands  # if using ConnMan
-# or
-nmcli device wifi list  # if using NetworkManager
-journalctl -u connman -f
-```
-
-### Build Fails with "Layer Not Found"
-
-**Check:**
-- Path in `bblayers.conf` is correct and exists
-- `layer.conf` is in `meta-supra/conf/`
-- `LAYERSERIES_COMPAT_kirkstone` is set
-
-**Debug:**
-```bash
-bitbake-layers show-layers
-bitbake-layers flatten
-```
-
----
-
-## What's Next
-
-### Immediate Next Steps
-
-1. **Test the build** — Ensure core-image-supra builds cleanly on your setup
-2. **Flash and boot** — Verify the Pi 3B boots and reaches a login prompt
-3. **Validate features** — Confirm SSH, Weston, and Wi-Fi work as expected
-
-### Integration Pipeline
-
-Once metaz-dev is stable:
-
-1. **Qt Dashboard** (from qt-dev branch)
-   - Build the Qt application
-   - Add qt-base and qt-declarative to IMAGE_INSTALL
-   - Include systemd service for dashboard auto-start
-
-2. **Backend Services** (from backend-dev branch)
-   - Integrate sensor/control daemons
-   - Add to IMAGE_INSTALL
-   - Enable systemd services for auto-start
-
-3. **Production Release**
-   - Pin all layer SHAs to specific commits
-   - Tag as release candidate
-   - Move to production branch with frozen versions
-
-### Version Management
-
-- Keep metaz-dev as the active development branch
-- Tag stable builds: `v1.0.0`, `v1.0.1`, etc.
-- Consider a production branch (prod) for release builds
-- Maintain compatibility with Yocto Kirkstone LTS through end-of-life
-
----
-
-## References
-
-- **Yocto Project Documentation** — https://docs.yoctoproject.org/
-- **Raspberry Pi Yocto Layer** — https://github.com/agherzan/meta-raspberrypi
-- **Weston Compositor** — https://wayland.freedesktop.org/weston/
-- **OpenSSH Configuration** — https://man.openbsd.org/sshd_config
-- **systemd Manual** — https://www.freedesktop.org/wiki/Software/systemd/
-
----
-
-## Summary
-
-The **metaz-dev** branch provides a clean, modular Yocto foundation for building the Supra Dashboard system image. The distro (supra) and image recipe (core-image-supra) work together to deliver a Wayland-based, SSH-accessible embedded Linux for Raspberry Pi 3B. Helper recipes add Wi-Fi and RDP support. The CommonAPI layer is held in reserve for future real-time middleware integration. Use this branch as the stable base for integrating the Qt dashboard and backend services from other branches.
->>>>>>> fb697fd (Add README file)
+<p align="center"><b>🚗 The <code>production</code> branch delivers the complete embedded experience — from gauges to GPIO — running seamlessly on Raspberry Pi 3B.</b></p>
